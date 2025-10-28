@@ -1,5 +1,5 @@
 import express from 'express';
-import { checkAvailability, bookAppointment } from '../services/calcomService.js';
+import { checkAvailability, bookAppointment  } from '../services/calcomService.js';
 
 const router = express.Router();
 
