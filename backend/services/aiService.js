@@ -65,8 +65,12 @@ export async function processMessage(agent, message, conversationHistory = []) {
  * Build system prompt with function definitions
  */
 function buildSystemPrompt(agent) {
-  let prompt = agent.systemPrompt || 'You are a helpful AI assistant.';
-
+  let prompt = agent.system_prompt || 'You are a helpful AI assistant.';
+  prompt += '\n\n=== USER INSTRUCTIONS ===\n';
+  prompt += 'Follow these rules when responding and make sure you are follow the prompt :\n';
+  prompt += '- Keep responses concise and relevant to the user\'s question\n';
+  prompt += '- If you need to use a function, respond EXACTLY in the format shown above\n';
+  prompt += '- Do not make up function results - wait for actual execution\n';
   if (agent.functions && agent.functions.length > 0) {
     prompt += '\n\n=== AVAILABLE FUNCTIONS ===\n';
     prompt += 'You have access to the following functions. When you need to use a function, respond EXACTLY in this format:\n\n';
@@ -90,6 +94,7 @@ function buildSystemPrompt(agent) {
     prompt += '- After the function executes, you will receive the result and should provide a natural language response to the user\n';
     prompt += '- Do not make up function results - wait for actual execution\n';
   }
+
 
   return prompt;
 }

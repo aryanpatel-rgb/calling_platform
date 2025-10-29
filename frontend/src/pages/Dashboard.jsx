@@ -74,6 +74,8 @@ const Dashboard = () => {
     }
   };
 
+  console.log('Stats:', stats);
+
   const container = {
     hidden: { opacity: 0 },
     show: {
@@ -88,6 +90,8 @@ const Dashboard = () => {
     hidden: { opacity: 0, y: 20 },
     show: { opacity: 1, y: 0 }
   };
+
+  console.log('Agents:', agents);
 
   return (
     <div className="space-y-8">
@@ -140,8 +144,8 @@ const Dashboard = () => {
         <motion.div variants={item} className="card">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Conversations</p>
-              <p className="text-3xl font-bold mt-1">{stats.totalConversations}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Chatbot Agents</p>
+              <p className="text-3xl font-bold mt-1">{stats.chatbotAgents}</p>
             </div>
             <div className="p-3 bg-secondary-100 dark:bg-secondary-900/30 rounded-xl">
               <MessageSquare className="w-6 h-6 text-secondary-600 dark:text-secondary-400" />
@@ -164,8 +168,8 @@ const Dashboard = () => {
         <motion.div variants={item} className="card">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Active Agents</p>
-              <p className="text-3xl font-bold mt-1">{stats.activeAgents}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Voice Call Agents</p>
+              <p className="text-3xl font-bold mt-1">{stats.voiceCallAgents}</p>
             </div>
             <div className="p-3 bg-pink-100 dark:bg-pink-900/30 rounded-xl">
               <Phone className="w-6 h-6 text-pink-600 dark:text-pink-400" />

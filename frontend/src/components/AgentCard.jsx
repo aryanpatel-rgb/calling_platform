@@ -6,6 +6,8 @@ import { useState } from 'react';
 const AgentCard = ({ agent }) => {
   const [showMenu, setShowMenu] = useState(false);
 
+  console.log('Agenttttt:', agent);
+
   const getStatusColor = (status) => {
     switch (status) {
       case 'active':

@@ -280,12 +280,42 @@ export async function getAllAgentsByUser(userId) {
     const agents = await query(`
       SELECT 
         a.*,
-        COUNT(DISTINCT c.id) as conversations,
-        COALESCE(AVG(CASE WHEN c.status = 'completed' THEN 100 ELSE 0 END), 0) as success_rate
+        COALESCE(conv_stats.conversations, 0) as conversations,
+        COALESCE(conv_stats.success_rate, 0) as success_rate,
+        COALESCE(
+          json_agg(
+            CASE WHEN af.id IS NOT NULL THEN
+              json_build_object(
+                'id', af.id,
+                'name', af.name,
+                'description', af.description,
+                'type', af.type,
+                'sub_type', af.sub_type,
+                'method', af.method,
+                'url', af.url,
+                'headers', af.headers,
+                'body_template', af.body_template,
+                'parameters', af.parameters,
+                'api_key', af.api_key,
+                'event_type_id', af.event_type_id,
+                'timezone', af.timezone
+              )
+            END
+          ) FILTER (WHERE af.id IS NOT NULL), 
+          '[]'::json
+        ) as functions
       FROM agents a
-      LEFT JOIN conversations c ON a.id = c.agent_id
+      LEFT JOIN (
+        SELECT 
+          agent_id,
+          COUNT(DISTINCT id) as conversations,
+          COALESCE(AVG(CASE WHEN status = 'completed' THEN 100 ELSE 0 END), 0) as success_rate
+        FROM conversations
+        GROUP BY agent_id
+      ) conv_stats ON a.id = conv_stats.agent_id
+      LEFT JOIN agent_functions af ON a.id = af.agent_id
       WHERE a.user_id = $1
-      GROUP BY a.id
+      GROUP BY a.id, conv_stats.conversations, conv_stats.success_rate
       ORDER BY a.created_at DESC
     `, [userId]);
 

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Play, Settings, Trash2, Calendar, Phone, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Play, Settings, Trash2, Calendar, Phone, MessageSquare, Edit, Power, PowerOff } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
@@ -10,6 +10,8 @@ const AgentDetail = () => {
   const navigate = useNavigate();
   const [agent, setAgent] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  console.log('Agent ID:', agent);
 
   useEffect(() => {
     fetchAgent();
@@ -39,6 +41,35 @@ const AgentDetail = () => {
     } catch (error) {
       console.error('Error deleting agent:', error);
       toast.error('Failed to delete agent');
+    }
+  };
+
+  const handleToggleStatus = async () => {
+    const newStatus = agent.status === 'active' ? 'paused' : 'active';
+    
+    try {
+      // Include all required fields for validation
+      const updateData = {
+        name: agent.name,
+        type: agent.type,
+        systemPrompt: agent.system_prompt,
+        description: agent.description,
+        model: agent.model,
+        temperature: agent.temperature,
+        maxTokens: agent.max_tokens,
+        status: newStatus,
+        voiceSettings: agent.voice_settings,
+        twilioConfig: agent.twilio_config,
+        functions: agent.functions || []
+      };
+
+      const response = await axios.put(`http://localhost:3000/api/agents/${id}`, updateData);
+      
+      setAgent(prev => ({ ...prev, status: newStatus }));
+      toast.success(`Agent ${newStatus === 'active' ? 'activated' : 'paused'} successfully`);
+    } catch (error) {
+      console.error('Error updating agent status:', error);
+      toast.error('Failed to update agent status');
     }
   };
 
@@ -81,6 +112,30 @@ const AgentDetail = () => {
             <Play className="w-4 h-4" />
             <span>Test Agent</span>
           </Link>
+          <Link to={`/agent/${id}/edit`} className="btn-secondary flex items-center space-x-2">
+            <Edit className="w-4 h-4" />
+            <span>Edit</span>
+          </Link>
+          <button
+            onClick={handleToggleStatus}
+            className={`btn-secondary flex items-center space-x-2 ${
+              agent.status === 'active' 
+                ? 'text-orange-600 hover:text-orange-700' 
+                : 'text-green-600 hover:text-green-700'
+            }`}
+          >
+            {agent.status === 'active' ? (
+              <>
+                <PowerOff className="w-4 h-4" />
+                <span>Pause</span>
+              </>
+            ) : (
+              <>
+                <Power className="w-4 h-4" />
+                <span>Activate</span>
+              </>
+            )}
+          </button>
           <button
             onClick={handleDelete}
             className="btn-secondary text-red-600 flex items-center space-x-2"
@@ -118,9 +173,11 @@ const AgentDetail = () => {
           <span className={`px-3 py-1 rounded-full text-sm font-medium ${
             agent.status === 'active'
               ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+              : agent.status === 'paused'
+              ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
               : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
           }`}>
-            {agent.status}
+            {agent.status === 'active' ? 'Active' : agent.status === 'paused' ? 'Paused' : 'Draft'}
           </span>
         </div>
 
@@ -169,11 +226,11 @@ const AgentDetail = () => {
           <div className="space-y-3">
             <div className="flex justify-between items-center">
               <span className="text-gray-600 dark:text-gray-400">Conversations</span>
-              <span className="text-2xl font-bold">{agent.conversations || 0}</span>
+              <span className="text-2xl font-bold">{agent.conversations_count || 0}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-600 dark:text-gray-400">Success Rate</span>
-              <span className="text-2xl font-bold text-green-600">{agent.successRate || 0}%</span>
+              <span className="text-2xl font-bold text-green-600">{agent.success_rate || 0}%</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-600 dark:text-gray-400">Functions</span>

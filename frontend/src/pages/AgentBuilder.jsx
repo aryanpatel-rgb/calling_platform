@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { MessageSquare, Phone, ArrowRight, ArrowLeft, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 import axios from 'axios';
@@ -23,8 +23,11 @@ const STEPS = [
 
 const AgentBuilder = () => {
   const navigate = useNavigate();
+  const { id } = useParams(); // Get agent ID from URL for editing
+  const isEditing = Boolean(id);
   const [currentStep, setCurrentStep] = useState(1);
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(isEditing);
   
   const [agentData, setAgentData] = useState({
     type: '', // 'chatbot' or 'voice_call'
@@ -49,6 +52,92 @@ const AgentBuilder = () => {
       testPhone: ''
     }
   });
+
+  // Load existing agent data when editing
+  useEffect(() => {
+    if (isEditing && id) {
+      fetchAgentData();
+    }
+  }, [id, isEditing]);
+
+  const fetchAgentData = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get(`http://localhost:3000/api/agents/${id}`);
+      const agent = response.data;
+      
+      // Map agent data to form structure
+      setAgentData({
+        type: agent.type,
+        name: agent.name,
+        description: agent.description || '',
+        systemPrompt: agent.system_prompt,
+        model: agent.model || 'gpt-4',
+        temperature: agent.temperature || 0.7,
+        maxTokens: agent.max_tokens || 1000,
+        functions: agent.functions || [],
+        voiceSettings: (() => {
+          if (!agent.voice_settings) return {
+            voiceId: 'default',
+            stability: 0.5,
+            similarityBoost: 0.75,
+            speed: 1.0,
+            greeting: ''
+          };
+          
+          // Check if it's already an object or a string that needs parsing
+          if (typeof agent.voice_settings === 'object') {
+            return agent.voice_settings;
+          }
+          
+          try {
+            return JSON.parse(agent.voice_settings);
+          } catch (error) {
+            console.warn('Failed to parse voice_settings:', error);
+            return {
+              voiceId: 'default',
+              stability: 0.5,
+              similarityBoost: 0.75,
+              speed: 1.0,
+              greeting: ''
+            };
+          }
+        })(),
+        twilioConfig: (() => {
+          if (!agent.twilio_config) return {
+            accountSid: '',
+            authToken: '',
+            phoneNumber: '',
+            testPhone: ''
+          };
+          
+          // Check if it's already an object or a string that needs parsing
+          if (typeof agent.twilio_config === 'object') {
+            return agent.twilio_config;
+          }
+          
+          try {
+            return JSON.parse(agent.twilio_config);
+          } catch (error) {
+            console.warn('Failed to parse twilio_config:', error);
+            return {
+              accountSid: '',
+              authToken: '',
+              phoneNumber: '',
+              testPhone: ''
+            };
+          }
+        })()
+      });
+      
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching agent:', error);
+      toast.error('Failed to load agent data');
+      setLoading(false);
+      navigate('/');
+    }
+  };
 
   const updateAgentData = (field, value) => {
     setAgentData(prev => ({
@@ -100,12 +189,20 @@ const AgentBuilder = () => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const response = await axios.post('http://localhost:3000/api/agents', agentData);
-      toast.success('Agent created successfully!');
+      let response;
+      if (isEditing) {
+        // Update existing agent
+        response = await axios.put(`http://localhost:3000/api/agents/${id}`, agentData);
+        toast.success('Agent updated successfully!');
+      } else {
+        // Create new agent
+        response = await axios.post('http://localhost:3000/api/agents', agentData);
+        toast.success('Agent created successfully!');
+      }
       navigate(`/agent/${response.data.id}`);
     } catch (error) {
       console.error('Error saving agent:', error);
-      toast.error(error.response?.data?.message || 'Failed to create agent');
+      toast.error(error.response?.data?.message || `Failed to ${isEditing ? 'update' : 'create'} agent`);
     } finally {
       setSaving(false);
     }
@@ -163,13 +260,27 @@ const AgentBuilder = () => {
 
   const currentStepIndex = filteredSteps.findIndex(s => s.id === currentStep);
 
+  // Show loading spinner when fetching agent data
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-5xl mx-auto">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Create New Agent</h1>
+        <h1 className="text-3xl font-bold mb-2">
+          {isEditing ? 'Edit Agent' : 'Create New Agent'}
+        </h1>
         <p className="text-gray-600 dark:text-gray-400">
-          Build a powerful AI agent in just a few steps
+          {isEditing 
+            ? 'Update your AI agent configuration' 
+            : 'Build a powerful AI agent in just a few steps'
+          }
         </p>
       </div>
 

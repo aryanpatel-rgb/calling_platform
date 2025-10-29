@@ -155,6 +155,8 @@ const TestAgent = () => {
     );
   }
 
+  console.log('Agent:', agent);
+
   return (
     <div className="max-w-5xl mx-auto">
       {/* Header */}
