@@ -103,7 +103,12 @@ export async function getAgentById(agentId) {
 export async function createAgent(agentData) {
   try {
     const id = uuidv4();
-    const userId = '00000000-0000-0000-0000-000000000001'; // Default user for now
+    // Use the user_id from agentData instead of hardcoded value
+    const userId = agentData.user_id;
+
+    if (!userId) {
+      throw new Error('User ID is required to create an agent');
+    }
 
     const result = await query(
       `INSERT INTO agents (
@@ -263,6 +268,136 @@ export async function getAgentStats() {
     return stats[0];
   } catch (error) {
     console.error('Error fetching stats:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get all agents for a specific user
+ */
+export async function getAllAgentsByUser(userId) {
+  try {
+    const agents = await query(`
+      SELECT 
+        a.*,
+        COUNT(DISTINCT c.id) as conversations,
+        COALESCE(AVG(CASE WHEN c.status = 'completed' THEN 100 ELSE 0 END), 0) as success_rate
+      FROM agents a
+      LEFT JOIN conversations c ON a.id = c.agent_id
+      WHERE a.user_id = $1
+      GROUP BY a.id
+      ORDER BY a.created_at DESC
+    `, [userId]);
+
+    // Convert numeric fields from strings to numbers for all agents
+    return agents.map(agent => ({
+      ...agent,
+      temperature: agent.temperature ? parseFloat(agent.temperature) : 0.7,
+      max_tokens: agent.max_tokens ? parseInt(agent.max_tokens) : 1000,
+      conversations_count: agent.conversations_count ? parseInt(agent.conversations_count) : 0,
+      success_rate: agent.success_rate ? parseFloat(agent.success_rate) : 0,
+      conversations: agent.conversations ? parseInt(agent.conversations) : 0,
+      functions: agent.functions?.map(func => ({
+        ...func,
+        name: func.name?.trim()
+      }))
+    }));
+  } catch (error) {
+    console.error('Error fetching user agents:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get agent by ID and user (ensures user owns the agent)
+ */
+export async function getAgentByIdAndUser(agentId, userId) {
+  try {
+    if (!isValidUUID(agentId)) {
+      return null;
+    }
+
+    const agents = await query(`
+      SELECT 
+        a.*,
+        COALESCE(
+          json_agg(
+            CASE WHEN af.id IS NOT NULL THEN
+              json_build_object(
+                'id', af.id,
+                'name', af.name,
+                'description', af.description,
+                'type', af.type,
+                'sub_type', af.sub_type,
+                'method', af.method,
+                'url', af.url,
+                'headers', af.headers,
+                'body_template', af.body_template,
+                'parameters', af.parameters,
+                'api_key', af.api_key,
+                'event_type_id', af.event_type_id,
+                'timezone', af.timezone
+              )
+            END
+          ) FILTER (WHERE af.id IS NOT NULL), 
+          '[]'::json
+        ) as functions
+      FROM agents a
+      LEFT JOIN agent_functions af ON a.id = af.agent_id
+      WHERE a.id = $1 AND a.user_id = $2
+      GROUP BY a.id
+    `, [agentId, userId]);
+
+    if (agents.length === 0) {
+      return null;
+    }
+
+    const agent = agents[0];
+    
+    // Convert numeric fields from strings to numbers
+    return {
+      ...agent,
+      temperature: agent.temperature ? parseFloat(agent.temperature) : 0.7,
+      max_tokens: agent.max_tokens ? parseInt(agent.max_tokens) : 1000,
+      conversations_count: agent.conversations_count ? parseInt(agent.conversations_count) : 0,
+      success_rate: agent.success_rate ? parseFloat(agent.success_rate) : 0,
+      functions: agent.functions?.map(func => ({
+        ...func,
+        name: func.name?.trim()
+      }))
+    };
+  } catch (error) {
+    console.error('Error fetching agent by ID and user:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get agent stats for a specific user
+ */
+export async function getAgentStatsByUser(userId) {
+  try {
+    const result = await query(`
+      SELECT 
+        COUNT(DISTINCT a.id) as total_agents,
+        COUNT(DISTINCT CASE WHEN a.status = 'active' THEN a.id END) as active_agents,
+        COUNT(DISTINCT c.id) as total_conversations,
+        COALESCE(AVG(a.success_rate), 0) as avg_success_rate
+      FROM agents a
+      LEFT JOIN conversations c ON a.id = c.agent_id
+      WHERE a.user_id = $1
+    `, [userId]);
+
+    const stats = result[0] || {};
+    
+    return {
+      totalAgents: parseInt(stats.total_agents) || 0,
+      activeAgents: parseInt(stats.active_agents) || 0,
+      totalConversations: parseInt(stats.total_conversations) || 0,
+      avgSuccessRate: parseFloat(stats.avg_success_rate) || 0
+    };
+  } catch (error) {
+    console.error('Error fetching user agent stats:', error);
     throw error;
   }
 }

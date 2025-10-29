@@ -7,6 +7,7 @@ import twilioRoutes from './routes/twilio.js';
 import calComRoutes from './routes/calcom.js';
 import chatRoutes from './routes/chat.js';
 import statsRoutes from './routes/stats.js';
+import authRoutes from './routes/auth.js';
 import { initializeDatabase, initializeSchema, checkConnection } from './db/database.js';
 
 dotenv.config();
@@ -26,6 +27,7 @@ app.use((req, res, next) => {
 });
 
 // Routes
+app.use('/api/auth', authRoutes);
 app.use('/api/agents', agentRoutes);
 app.use('/api/twilio', twilioRoutes);
 app.use('/api/calcom', calComRoutes);

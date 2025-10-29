@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Plus, MessageSquare, Phone, Calendar, TrendingUp, Activity } from 'lucide-react';
 import AgentCard from '../components/AgentCard';
+import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
+import toast from 'react-hot-toast';
 
 const Dashboard = () => {
   const [agents, setAgents] = useState([]);
@@ -15,30 +17,60 @@ const Dashboard = () => {
     activeAgents: 0
   });
 
+  const { isAuthenticated, token } = useAuth();
+  const navigate = useNavigate();
+
   useEffect(() => {
-    fetchAgents();
-    fetchStats();
-  }, []);
+    // Only fetch data if user is authenticated
+    if (isAuthenticated() && token) {
+      fetchAgents();
+      fetchStats();
+    }
+  }, [isAuthenticated, token]);
 
   const fetchAgents = async () => {
     try {
-      const response = await axios.get('http://localhost:3000/api/agents');
+      const response = await axios.get('http://localhost:3000/api/agents', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      console.log('Fetched agents:', response.data);
       setAgents(response.data);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching agents:', error);
       setLoading(false);
-      // Set mock data for development
-      setAgents([]);
+      
+      if (error.response?.status === 401) {
+        toast.error('Authentication failed. Please log in again.');
+        navigate('/login');
+      } else {
+        toast.error('Failed to fetch agents');
+        // Set empty array for development
+        setAgents([]);
+      }
     }
   };
 
   const fetchStats = async () => {
     try {
-      const response = await axios.get('http://localhost:3000/api/stats');
+      const response = await axios.get('http://localhost:3000/api/stats', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      console.log('Fetched stats:', response.data);
       setStats(response.data);
     } catch (error) {
       console.error('Error fetching stats:', error);
+      
+      if (error.response?.status === 401) {
+        toast.error('Authentication failed. Please log in again.');
+        navigate('/login');
+      } else {
+        toast.error('Failed to fetch statistics');
+      }
     }
   };
 
@@ -75,7 +107,9 @@ const Dashboard = () => {
             className="inline-flex items-center space-x-2 bg-white text-primary-600 px-6 py-3 rounded-xl font-medium hover:bg-white/90 transition-all duration-200 hover:scale-105 active:scale-95"
           >
             <Plus className="w-5 h-5" />
-            <span>Create Your First Agent</span>
+            <span>{
+              stats.totalAgents === 0 ? 'Create Your First Agent' : 'Create New Agent'
+              }</span>
           </Link>
         </div>
         

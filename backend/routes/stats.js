@@ -1,50 +1,60 @@
 import express from 'express';
 import { query } from '../db/database.js';
+import { authenticateToken } from '../utils/auth.js';
 
 const router = express.Router();
 
 /**
- * Get platform statistics
+ * Get platform statistics (user-specific)
  */
-router.get('/', async (req, res) => {
+router.get('/', authenticateToken, async (req, res) => {
   try {
-    // Get total agents count
+    const userId = req.user.id;
+
+    // Get total agents count for this user
     const agentStats = await query(`
       SELECT 
         COUNT(*) as total_agents,
         COUNT(CASE WHEN type = 'chatbot' THEN 1 END) as chatbot_count,
         COUNT(CASE WHEN type = 'voice_call' THEN 1 END) as voice_call_count
       FROM agents
-    `);
+      WHERE user_id = $1
+    `, [userId]);
 
-    // Get conversation statistics
+    // Get conversation statistics for this user's agents
     const conversationStats = await query(`
       SELECT 
         COUNT(*) as total_conversations,
-        COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_conversations,
-        COUNT(CASE WHEN status = 'active' THEN 1 END) as active_conversations
-      FROM conversations
-    `);
+        COUNT(CASE WHEN c.status = 'completed' THEN 1 END) as completed_conversations,
+        COUNT(CASE WHEN c.status = 'active' THEN 1 END) as active_conversations
+      FROM conversations c
+      JOIN agents a ON c.agent_id = a.id
+      WHERE a.user_id = $1
+    `, [userId]);
 
-    // Get function execution statistics
+    // Get function execution statistics for this user's agents
     const functionStats = await query(`
       SELECT 
         COUNT(*) as total_function_calls,
-        COUNT(CASE WHEN status = 'success' THEN 1 END) as successful_calls,
-        COUNT(CASE WHEN status = 'error' THEN 1 END) as failed_calls
-      FROM function_executions
-    `);
+        COUNT(CASE WHEN fe.status = 'success' THEN 1 END) as successful_calls,
+        COUNT(CASE WHEN fe.status = 'failed' THEN 1 END) as failed_calls
+      FROM function_executions fe
+      JOIN conversations c ON fe.conversation_id = c.id
+      JOIN agents a ON c.agent_id = a.id
+      WHERE a.user_id = $1
+    `, [userId]);
 
-    // Get recent activity (last 7 days)
+    // Get recent activity (last 7 days) for this user's agents
     const recentActivity = await query(`
       SELECT 
-        DATE(created_at) as date,
+        DATE(c.created_at) as date,
         COUNT(*) as conversations_today
-      FROM conversations 
-      WHERE created_at >= NOW() - INTERVAL '7 days'
-      GROUP BY DATE(created_at)
+      FROM conversations c
+      JOIN agents a ON c.agent_id = a.id
+      WHERE a.user_id = $1 AND c.created_at >= NOW() - INTERVAL '7 days'
+      GROUP BY DATE(c.created_at)
       ORDER BY date DESC
-    `);
+    `, [userId]);
 
     // Calculate success rate
     const totalConversations = parseInt(conversationStats[0]?.total_conversations || 0);
@@ -101,13 +111,14 @@ router.get('/', async (req, res) => {
 });
 
 /**
- * Get agent performance stats
+ * Get agent performance stats (user-specific)
  */
-router.get('/agent/:id', async (req, res) => {
+router.get('/agent/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.user.id;
 
-    // Get agent-specific stats
+    // Get agent-specific stats, but only if the user owns the agent
     const agentStats = await query(`
       SELECT 
         a.*,
@@ -117,13 +128,15 @@ router.get('/agent/:id', async (req, res) => {
         COUNT(CASE WHEN fe.status = 'success' THEN 1 END) as successful_function_calls
       FROM agents a
       LEFT JOIN conversations c ON a.id = c.agent_id
-      LEFT JOIN function_executions fe ON a.id = fe.agent_id
-      WHERE a.id = $1
+      LEFT JOIN function_executions fe ON c.id = fe.conversation_id
+      WHERE a.id = $1 AND a.user_id = $2
       GROUP BY a.id
-    `, [id]);
+    `, [id, userId]);
 
     if (agentStats.length === 0) {
-      return res.status(404).json({ error: 'Agent not found' });
+      return res.status(404).json({ 
+        error: 'Agent not found or you do not have permission to access it.' 
+      });
     }
 
     const stats = agentStats[0];

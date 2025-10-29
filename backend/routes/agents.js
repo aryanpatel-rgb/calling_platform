@@ -1,13 +1,14 @@
 import express from 'express';
 import { validateAgent } from '../utils/validation.js';
 import * as agentRepo from '../db/repositories/agentRepository.js';
+import { authenticateToken } from '../utils/auth.js';
 
 const router = express.Router();
 
-// Get all agents
-router.get('/', async (req, res) => {
+// Get all agents (user-specific)
+router.get('/', authenticateToken, async (req, res) => {
   try {
-    const agents = await agentRepo.getAllAgents();
+    const agents = await agentRepo.getAllAgentsByUser(req.user.id);
     res.json(agents);
   } catch (error) {
     console.error('Get agents error:', error);
@@ -15,10 +16,10 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Get stats
-router.get('/stats', async (req, res) => {
+// Get stats (user-specific)
+router.get('/stats', authenticateToken, async (req, res) => {
   try {
-    const stats = await agentRepo.getAgentStats();
+    const stats = await agentRepo.getAgentStatsByUser(req.user.id);
     res.json(stats);
   } catch (error) {
     console.error('Get stats error:', error);
@@ -26,15 +27,14 @@ router.get('/stats', async (req, res) => {
   }
 });
 
-// Get single agent
-router.get('/:id', async (req, res) => {
+// Get single agent (user-specific)
+router.get('/:id', authenticateToken, async (req, res) => {
   try {
-    const agent = await agentRepo.getAgentById(req.params.id);
+    const agent = await agentRepo.getAgentByIdAndUser(req.params.id, req.user.id);
     if (!agent) {
       return res.status(404).json({ 
         error: true, 
-        message: 'Agent not found. If this is an old agent, please recreate it with the database enabled.',
-        hint: 'Old agents from in-memory storage are not compatible with database mode.'
+        message: 'Agent not found or you do not have permission to access it.'
       });
     }
     res.json(agent);
@@ -45,14 +45,20 @@ router.get('/:id', async (req, res) => {
 });
 
 // Create agent
-router.post('/', async (req, res) => {
+router.post('/', authenticateToken, async (req, res) => {
   try {
     const validation = validateAgent(req.body);
     if (!validation.valid) {
       return res.status(400).json({ error: true, message: validation.error });
     }
 
-    const agent = await agentRepo.createAgent(req.body);
+    // Add user_id to agent data
+    const agentData = {
+      ...req.body,
+      user_id: req.user.id
+    };
+
+    const agent = await agentRepo.createAgent(agentData);
     res.status(201).json(agent);
   } catch (error) {
     console.error('Create agent error:', error);
@@ -60,12 +66,15 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Update agent
-router.put('/:id', async (req, res) => {
+// Update agent (user-specific)
+router.put('/:id', authenticateToken, async (req, res) => {
   try {
-    const agent = await agentRepo.getAgentById(req.params.id);
+    const agent = await agentRepo.getAgentByIdAndUser(req.params.id, req.user.id);
     if (!agent) {
-      return res.status(404).json({ error: true, message: 'Agent not found' });
+      return res.status(404).json({ 
+        error: true, 
+        message: 'Agent not found or you do not have permission to update it.' 
+      });
     }
 
     const validation = validateAgent(req.body);
@@ -81,14 +90,14 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// Delete agent
-router.delete('/:id', async (req, res) => {
+// Delete agent (user-specific)
+router.delete('/:id', authenticateToken, async (req, res) => {
   try {
-    const agent = await agentRepo.getAgentById(req.params.id);
+    const agent = await agentRepo.getAgentByIdAndUser(req.params.id, req.user.id);
     if (!agent) {
       return res.status(404).json({ 
         error: true, 
-        message: 'Agent not found. If this is an old agent, it may have been created before database was enabled.'
+        message: 'Agent not found or you do not have permission to delete it.'
       });
     }
 

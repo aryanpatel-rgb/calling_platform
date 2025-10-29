@@ -17,10 +17,25 @@ export function convertToCalTime({ date, time, timeZone, duration }) {
   try {
     const currentYear = new Date().getFullYear();
 
-    // Combine and parse into DateTime in user's timezone
-    const start = DateTime.fromFormat(`${date} ${currentYear} ${time}`, 'd LLL yyyy h a', { zone: timeZone });
+    // Try multiple time formats to handle different input patterns
+    const timeFormats = [
+      'h:mm a',  // 11:30 am
+      'h a',     // 11 am
+      'HH:mm',   // 23:30 (24-hour)
+      'H:mm'     // 9:30 (24-hour without leading zero)
+    ];
 
-    if (!start.isValid) throw new Error('Invalid date/time format');
+    let start = null;
+    
+    // Try each time format until one works
+    for (const timeFormat of timeFormats) {
+      start = DateTime.fromFormat(`${date} ${currentYear} ${time}`, `d LLL yyyy ${timeFormat}`, { zone: timeZone });
+      if (start.isValid) break;
+    }
+
+    if (!start || !start.isValid) {
+      throw new Error(`Invalid date/time format: ${date} ${time}`);
+    }
 
     // Add duration minutes for end time
     const end = start.plus({ minutes: duration });
@@ -221,12 +236,18 @@ export async function executeCalComFunction(functionConfig, parameters) {
   const userTimezone = await getUserProfile(apiKey);
   const eventId = await getEventType(apiKey, event_type_id);
 
-  const {start , end} = convertToCalTime({
+  const timeResult = convertToCalTime({
     date: parameters.date,
     time: parameters.time,
     timeZone: userTimezone?.timezone || timezone || 'UTC',
     duration: eventId?.length || 30
   });
+
+  if (!timeResult) {
+    throw new Error(`Failed to parse date/time: ${parameters.date} ${parameters.time}`);
+  }
+
+  const { start, end } = timeResult;
 
   console.log('Converted timesssssssssssssssssssss:', { start, end });
  
