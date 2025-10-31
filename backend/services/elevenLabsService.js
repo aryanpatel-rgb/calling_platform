@@ -22,29 +22,34 @@ const VOICE_IDS = {
 export async function generateSpeech(text, options = {}) {
   try {
     if (!ELEVENLABS_API_KEY) {
-      console.warn('ElevenLabs API key not configured. Skipping TTS.');
+      console.warn('ElevenLabs API key not configured');
       return null;
     }
 
     const {
       voiceId = 'default',
-      stability = 0.5,
-      similarityBoost = 0.75,
-      speed = 1.0
+      stability = 0.4, // Lower stability for faster generation
+      similarityBoost = 0.7, // Slightly lower for speed
+      speed = 1.3 // Faster speech
     } = options;
 
     const actualVoiceId = VOICE_IDS[voiceId] || VOICE_IDS['default'];
+    
+    console.log(`Generating speech with ElevenLabs for: "${text.substring(0, 50)}..."`);
+    const startTime = Date.now();
 
     const response = await axios.post(
       `${ELEVENLABS_API_BASE}/text-to-speech/${actualVoiceId}`,
       {
         text: text,
-        model_id: 'eleven_monolingual_v1',
+        model_id: 'eleven_turbo_v2', // Use faster turbo model
         voice_settings: {
           stability: stability,
           similarity_boost: similarityBoost,
-          speed: speed
-        }
+          speed: speed,
+          use_speaker_boost: false // Disable for faster processing
+        },
+        output_format: 'mp3_22050_32' // Lower quality for faster generation
       },
       {
         headers: {
@@ -52,9 +57,13 @@ export async function generateSpeech(text, options = {}) {
           'Content-Type': 'application/json',
           'Accept': 'audio/mpeg'
         },
-        responseType: 'arraybuffer'
+        responseType: 'arraybuffer',
+        timeout: 10000 // 10 second timeout
       }
     );
+
+    const generationTime = Date.now() - startTime;
+    console.log(`ElevenLabs generation completed in ${generationTime}ms`);
 
     // In production, save to S3 or similar and return URL
     // For now, we'll return a base64 encoded data URL

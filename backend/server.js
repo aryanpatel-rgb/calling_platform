@@ -1,13 +1,13 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import bodyParser from 'body-parser';
 import agentRoutes from './routes/agents.js';
 import twilioRoutes from './routes/twilio.js';
 import calComRoutes from './routes/calcom.js';
 import chatRoutes from './routes/chat.js';
 import statsRoutes from './routes/stats.js';
 import authRoutes from './routes/auth.js';
+import audioRoutes from './routes/audio.js';
 import { initializeDatabase, initializeSchema, checkConnection } from './db/database.js';
 
 dotenv.config();
@@ -17,8 +17,8 @@ const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Request logging
 app.use((req, res, next) => {
@@ -32,6 +32,7 @@ app.use('/api/agents', agentRoutes);
 app.use('/api/twilio', twilioRoutes);
 app.use('/api/calcom', calComRoutes);
 app.use('/api/stats', statsRoutes);
+app.use('/api/audio', audioRoutes);
 app.use('/api', chatRoutes);
 
 // Health check

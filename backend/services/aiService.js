@@ -37,13 +37,15 @@ export async function processMessage(agent, message, conversationHistory = []) {
     // Use OpenAI
     // Ensure temperature and max_tokens are numbers
     const temperature = parseFloat(agent.temperature) || 0.7;
-    const maxTokens = parseInt(agent.maxTokens || agent.max_tokens) || 1000;
+    // For voice calls, limit tokens to ensure concise responses
+    const maxTokens = parseInt(agent.maxTokens || agent.max_tokens) || 2000;
+    const voiceMaxTokens = Math.min(maxTokens, 150); // Limit voice responses to 150 tokens (~1-2 sentences)
 
     const completion = await openai.chat.completions.create({
       model: model,
       messages: messages,
       temperature: temperature,
-      max_tokens: maxTokens,
+      max_tokens: voiceMaxTokens, // Use limited tokens for voice calls
     });
 
     const responseMessage = completion.choices[0].message.content;
@@ -64,9 +66,17 @@ export async function processMessage(agent, message, conversationHistory = []) {
 /**
  * Build system prompt with function definitions
  */
-function buildSystemPrompt(agent) {
+export function buildSystemPrompt(agent) {
   let prompt = agent.system_prompt || 'You are a helpful AI assistant.';
-  prompt += '\n\n=== USER INSTRUCTIONS ===\n';
+  prompt += '\n\n=== VOICE CALL INSTRUCTIONS ===\n';
+  prompt += 'This is a VOICE CONVERSATION. Follow these critical rules:\n';
+  prompt += '- Keep ALL responses SHORT and CONVERSATIONAL (1-3 sentences maximum)\n';
+  prompt += '- Speak naturally like a human in a phone conversation\n';
+  prompt += '- Avoid long explanations, lists, or marketing pitches\n';
+  prompt += '- If asked to repeat, give a brief summary, not the full response\n';
+  prompt += '- Ask follow-up questions to keep the conversation flowing\n';
+  prompt += '- Remember: Users are listening, not reading - be concise!\n';
+  prompt += '\n=== USER INSTRUCTIONS ===\n';
   prompt += 'Follow these rules when responding and make sure you are follow the prompt :\n';
   prompt += '- Keep responses concise and relevant to the user\'s question\n';
   prompt += '- If you need to use a function, respond EXACTLY in the format shown above\n';
@@ -147,7 +157,38 @@ async function processWithClaude(messages, agent) {
   };
 }
 
+/**
+ * Generate a simple response for voice calls (without function detection)
+ */
+export async function generateResponse(messages, options = {}) {
+  try {
+    // Use faster model for voice responses - gpt-3.5-turbo is much faster than gpt-4
+    const model = options.model || 'gpt-3.5-turbo';
+    const temperature = parseFloat(options.temperature) || 0.7;
+    const maxTokens = parseInt(options.maxTokens) || 100; // Reduced for faster responses
+
+    const completion = await openai.chat.completions.create({
+      model: model,
+      messages: messages,
+      temperature: temperature,
+      max_tokens: maxTokens,
+      // Add performance optimizations
+      stream: false, // Disable streaming for faster completion
+      top_p: 0.9, // Focus on more likely responses
+      frequency_penalty: 0.1, // Slight penalty to avoid repetition
+      presence_penalty: 0.1 // Encourage diverse responses
+    });
+
+    return completion.choices[0].message.content;
+  } catch (error) {
+    console.error('Generate Response Error:', error);
+    throw new Error(`Failed to generate response: ${error.message}`);
+  }
+}
+
 export default {
-  processMessage
+  processMessage,
+  generateResponse,
+  buildSystemPrompt
 };
 

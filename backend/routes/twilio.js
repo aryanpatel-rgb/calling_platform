@@ -1,7 +1,7 @@
 import express from 'express';
 import twilio from 'twilio';
 import * as agentRepo from '../db/repositories/agentRepository.js';
-import { initiateCall, handleVoiceWebhook, endCall } from '../services/twilioService.js';
+import { initiateCall, handleVoiceWebhook, endCall, processUserSpeech } from '../services/twilioService.js';
 
 const router = express.Router();
 
@@ -112,6 +112,40 @@ router.post('/voice/webhook', async (req, res) => {
   } catch (error) {
     console.error('Voice webhook error:', error);
     res.status(500).send('Error processing call');
+  }
+});
+
+// Handle user speech input and generate agent response
+router.post('/voice/process', async (req, res) => {
+  try {
+    const twiml = await processUserSpeech(req.body, req.query);
+    res.type('text/xml');
+    res.send(twiml);
+  } catch (error) {
+    console.error('Voice process error:', error);
+    res.status(500).send('Error processing speech');
+  }
+});
+
+// Handle partial speech recognition results for real-time feedback
+router.post('/voice/partial', async (req, res) => {
+  try {
+    const { agentId } = req.query;
+    const { UnstableSpeechResult, Confidence } = req.body;
+    
+    // Log partial results for debugging (optional)
+    if (UnstableSpeechResult && UnstableSpeechResult.trim() !== '') {
+      console.log(`Partial speech for agent ${agentId}: "${UnstableSpeechResult}" (confidence: ${Confidence})`);
+    }
+    
+    // Return empty TwiML to continue listening
+    const VoiceResponse = twilio.twiml.VoiceResponse;
+    const twiml = new VoiceResponse();
+    res.type('text/xml');
+    res.send(twiml.toString());
+  } catch (error) {
+    console.error('Partial speech error:', error);
+    res.status(200).send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
   }
 });
 
