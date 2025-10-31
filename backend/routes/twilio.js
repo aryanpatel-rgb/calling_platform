@@ -2,6 +2,8 @@ import express from 'express';
 import twilio from 'twilio';
 import * as agentRepo from '../db/repositories/agentRepository.js';
 import { initiateCall, handleVoiceWebhook, endCall, processUserSpeech } from '../services/twilioService.js';
+import { validateTwilioCall, validateAgentId } from '../middleware/validation.js';
+import { voiceLimiter } from '../middleware/rateLimiting.js';
 
 const router = express.Router();
 
@@ -50,7 +52,7 @@ router.post('/validate', async (req, res) => {
 });
 
 // Initiate test call
-router.post('/agents/:id/call', async (req, res) => {
+router.post('/agents/:id/call', voiceLimiter, validateTwilioCall, async (req, res) => {
   try {
     const agent = await agentRepo.getAgentById(req.params.id);
     if (!agent) {
@@ -62,9 +64,6 @@ router.post('/agents/:id/call', async (req, res) => {
     }
 
     const { phoneNumber } = req.body;
-    if (!phoneNumber) {
-      return res.status(400).json({ error: true, message: 'Phone number is required' });
-    }
 
     if (!agent.twilioConfig || !agent.twilioConfig.accountSid) {
       return res.status(400).json({ error: true, message: 'Twilio not configured for this agent' });

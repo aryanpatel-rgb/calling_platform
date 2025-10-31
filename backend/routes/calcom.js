@@ -1,5 +1,7 @@
 import express from 'express';
 import { checkAvailability, bookAppointment  } from '../services/calcomService.js';
+import { validateCalcomBooking } from '../middleware/validation.js';
+import { generalLimiter } from '../middleware/rateLimiting.js';
 
 const router = express.Router();
 
@@ -31,7 +33,7 @@ router.post('/availability', async (req, res) => {
 });
 
 // Book appointment
-router.post('/book', async (req, res) => {
+router.post('/book', generalLimiter, validateCalcomBooking, async (req, res) => {
   try {
     const {
       apiKey,
@@ -44,13 +46,6 @@ router.post('/book', async (req, res) => {
     } = req.body;
 
     console.log("📅 Booking request:", req.body);
-
-    if (!apiKey || !eventTypeId || !startTime || !attendeeName || !attendeeEmail) {
-      return res.status(400).json({
-        error: true,
-        message: 'Missing required fields'
-      });
-    }
 
     const booking = await bookAppointment({
       apiKey,

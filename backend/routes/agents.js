@@ -3,6 +3,8 @@ import { validateAgent } from '../utils/validation.js';
 import * as agentRepo from '../db/repositories/agentRepository.js';
 import { authenticateToken } from '../utils/auth.js';
 import { generateSpeech } from '../services/elevenLabsService.js';
+import { validateAgent as validateAgentMiddleware, validateAgentId } from '../middleware/validation.js';
+import { agentLimiter } from '../middleware/rateLimiting.js';
 
 const router = express.Router();
 
@@ -46,13 +48,8 @@ router.get('/:id', authenticateToken, async (req, res) => {
 });
 
 // Create agent
-router.post('/', authenticateToken, async (req, res) => {
+router.post('/', authenticateToken, agentLimiter, validateAgentMiddleware, async (req, res) => {
   try {
-    const validation = validateAgent(req.body);
-    if (!validation.valid) {
-      return res.status(400).json({ error: true, message: validation.error });
-    }
-
     // Add user_id to agent data
     const agentData = {
       ...req.body,
@@ -68,7 +65,7 @@ router.post('/', authenticateToken, async (req, res) => {
 });
 
 // Update agent (user-specific)
-router.put('/:id', authenticateToken, async (req, res) => {
+router.put('/:id', authenticateToken, agentLimiter, validateAgentId, validateAgentMiddleware, async (req, res) => {
   try {
     const agent = await agentRepo.getAgentByIdAndUser(req.params.id, req.user.id);
     if (!agent) {
@@ -76,11 +73,6 @@ router.put('/:id', authenticateToken, async (req, res) => {
         error: true, 
         message: 'Agent not found or you do not have permission to update it.' 
       });
-    }
-
-    const validation = validateAgent(req.body);
-    if (!validation.valid) {
-      return res.status(400).json({ error: true, message: validation.error });
     }
 
     const updatedAgent = await agentRepo.updateAgent(req.params.id, req.body);

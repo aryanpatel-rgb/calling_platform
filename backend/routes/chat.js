@@ -3,11 +3,13 @@ import { processMessage } from '../services/aiService.js';
 import { executeFunction } from '../services/functionExecutor.js';
 import * as agentRepo from '../db/repositories/agentRepository.js';
 import * as conversationRepo from '../db/repositories/conversationRepository.js';
+import { validateChatMessage, validateAgentId } from '../middleware/validation.js';
+import { chatLimiter } from '../middleware/rateLimiting.js';
 
 const router = express.Router();
 
 // Chat with agent
-router.post('/agents/:id/chat', async (req, res) => {
+router.post('/agents/:id/chat', chatLimiter, validateAgentId, validateChatMessage, async (req, res) => {
   try {
     // Get agent with functions from database
     const agent = await agentRepo.getAgentById(req.params.id);

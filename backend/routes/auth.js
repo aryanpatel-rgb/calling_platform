@@ -9,30 +9,17 @@ import {
   getUserStats
 } from '../db/repositories/userRepository.js';
 import { generateToken, authenticateToken } from '../utils/auth.js';
+import { validateRegister, validateLogin, validateProfileUpdate } from '../middleware/validation.js';
+import { authLimiter } from '../middleware/rateLimiting.js';
 
 const router = express.Router();
 
 /**
  * Register new user
  */
-router.post('/register', async (req, res) => {
+router.post('/register', authLimiter, validateRegister, async (req, res) => {
   try {
     const { email, password, name } = req.body;
-
-    // Validation
-    if (!email || !password || !name) {
-      return res.status(400).json({
-        error: true,
-        message: 'Email, password, and name are required'
-      });
-    }
-
-    if (password.length < 6) {
-      return res.status(400).json({
-        error: true,
-        message: 'Password must be at least 6 characters long'
-      });
-    }
 
     // Check if email already exists
     if (await emailExists(email)) {
@@ -73,17 +60,9 @@ router.post('/register', async (req, res) => {
 /**
  * Login user
  */
-router.post('/login', async (req, res) => {
+router.post('/login', authLimiter, validateLogin, async (req, res) => {
   try {
     const { email, password } = req.body;
-
-    // Validation
-    if (!email || !password) {
-      return res.status(400).json({
-        error: true,
-        message: 'Email and password are required'
-      });
-    }
 
     // Find user
     const user = await findUserByEmail(email);
@@ -166,7 +145,7 @@ router.get('/profile', authenticateToken, async (req, res) => {
 /**
  * Update user profile
  */
-router.put('/profile', authenticateToken, async (req, res) => {
+router.put('/profile', authenticateToken, validateProfileUpdate, async (req, res) => {
   try {
     const { name, email } = req.body;
     const userId = req.user.id;
