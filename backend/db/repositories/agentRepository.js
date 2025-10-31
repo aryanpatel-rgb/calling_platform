@@ -78,6 +78,29 @@ export async function getAgentById(agentId) {
     if (agent.conversations_count) agent.conversations_count = parseInt(agent.conversations_count);
     if (agent.success_rate) agent.success_rate = parseFloat(agent.success_rate);
 
+    // Parse JSON fields and convert to camelCase for backend compatibility
+    if (agent.twilio_config) {
+      try {
+        agent.twilioConfig = typeof agent.twilio_config === 'string' 
+          ? JSON.parse(agent.twilio_config) 
+          : agent.twilio_config;
+      } catch (error) {
+        console.warn('Failed to parse twilio_config:', error);
+        agent.twilioConfig = null;
+      }
+    }
+
+    if (agent.voice_settings) {
+      try {
+        agent.voiceSettings = typeof agent.voice_settings === 'string' 
+          ? JSON.parse(agent.voice_settings) 
+          : agent.voice_settings;
+      } catch (error) {
+        console.warn('Failed to parse voice_settings:', error);
+        agent.voiceSettings = null;
+      }
+    }
+
     // Get functions for this agent
     const functions = await query(
       `SELECT * FROM agent_functions WHERE agent_id = $1 ORDER BY created_at`,
@@ -385,7 +408,7 @@ export async function getAgentByIdAndUser(agentId, userId) {
     const agent = agents[0];
     
     // Convert numeric fields from strings to numbers
-    return {
+    const processedAgent = {
       ...agent,
       temperature: agent.temperature ? parseFloat(agent.temperature) : 0.7,
       max_tokens: agent.max_tokens ? parseInt(agent.max_tokens) : 1000,
@@ -396,6 +419,31 @@ export async function getAgentByIdAndUser(agentId, userId) {
         name: func.name?.trim()
       }))
     };
+
+    // Parse JSON fields and convert to camelCase for backend compatibility
+    if (agent.twilio_config) {
+      try {
+        processedAgent.twilioConfig = typeof agent.twilio_config === 'string' 
+          ? JSON.parse(agent.twilio_config) 
+          : agent.twilio_config;
+      } catch (error) {
+        console.warn('Failed to parse twilio_config:', error);
+        processedAgent.twilioConfig = null;
+      }
+    }
+
+    if (agent.voice_settings) {
+      try {
+        processedAgent.voiceSettings = typeof agent.voice_settings === 'string' 
+          ? JSON.parse(agent.voice_settings) 
+          : agent.voice_settings;
+      } catch (error) {
+        console.warn('Failed to parse voice_settings:', error);
+        processedAgent.voiceSettings = null;
+      }
+    }
+
+    return processedAgent;
   } catch (error) {
     console.error('Error fetching agent by ID and user:', error);
     throw error;

@@ -2,6 +2,7 @@ import express from 'express';
 import { validateAgent } from '../utils/validation.js';
 import * as agentRepo from '../db/repositories/agentRepository.js';
 import { authenticateToken } from '../utils/auth.js';
+import { generateSpeech } from '../services/elevenLabsService.js';
 
 const router = express.Router();
 
@@ -106,6 +107,43 @@ router.delete('/:id', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Delete agent error:', error);
     res.status(500).json({ error: true, message: error.message });
+  }
+});
+
+// Test voice sample
+router.post('/voice/test', authenticateToken, async (req, res) => {
+  try {
+    const { voiceId, stability, similarityBoost, speed, text } = req.body;
+    
+    // Default test text if none provided
+    const testText = text || "Hello! This is a test of your selected voice settings. How does this sound?";
+    
+    // Generate speech using ElevenLabs
+    const audioUrl = await generateSpeech(testText, {
+      voiceId: voiceId || 'default',
+      stability: stability || 0.5,
+      similarityBoost: similarityBoost || 0.75,
+      speed: speed || 1.0
+    });
+
+    if (!audioUrl) {
+      return res.status(503).json({ 
+        error: true, 
+        message: 'Voice generation service is not available. Please check ElevenLabs configuration.' 
+      });
+    }
+
+    res.json({ 
+      success: true, 
+      audioUrl: audioUrl,
+      message: 'Voice sample generated successfully'
+    });
+  } catch (error) {
+    console.error('Voice test error:', error);
+    res.status(500).json({ 
+      error: true, 
+      message: `Failed to generate voice sample: ${error.message}` 
+    });
   }
 });
 

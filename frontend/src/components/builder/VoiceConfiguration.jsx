@@ -1,5 +1,7 @@
 import { Volume2, Play, Pause } from 'lucide-react';
 import { useState } from 'react';
+import axios from 'axios';
+import toast from 'react-hot-toast';
 
 const VoiceConfiguration = ({ voiceSettings, onChange }) => {
   const [playing, setPlaying] = useState(false);
@@ -20,10 +22,58 @@ const VoiceConfiguration = ({ voiceSettings, onChange }) => {
     });
   };
 
-  const handlePlaySample = () => {
+  const handlePlaySample = async () => {
     setPlaying(true);
-    // Simulate audio playback
-    setTimeout(() => setPlaying(false), 3000);
+    
+    try {
+      // Call the backend API to generate voice sample
+      const response = await axios.post('http://localhost:3000/api/agents/voice/test', {
+        voiceId: voiceSettings.voiceId,
+        stability: voiceSettings.stability,
+        similarityBoost: voiceSettings.similarityBoost,
+        speed: voiceSettings.speed,
+        text: voiceSettings.greeting || "Hello! This is a test of your selected voice settings. How does this sound?"
+      });
+
+      if (response.data.success && response.data.audioUrl) {
+        // Create audio element and play the generated audio
+        const audio = new Audio(response.data.audioUrl);
+        
+        audio.onloadeddata = () => {
+          audio.play().catch(error => {
+            console.error('Audio play error:', error);
+            toast.error('Failed to play audio. Please check your browser settings.');
+            setPlaying(false);
+          });
+        };
+
+        audio.onended = () => {
+          setPlaying(false);
+        };
+
+        audio.onerror = () => {
+          console.error('Audio loading error');
+          toast.error('Failed to load audio sample');
+          setPlaying(false);
+        };
+
+      } else {
+        toast.error('Failed to generate voice sample');
+        setPlaying(false);
+      }
+    } catch (error) {
+      console.error('Voice test error:', error);
+      
+      if (error.response?.status === 503) {
+        toast.error('Voice generation service is not available. Please check ElevenLabs configuration.');
+      } else if (error.response?.status === 401) {
+        toast.error('Authentication required. Please log in again.');
+      } else {
+        toast.error(error.response?.data?.message || 'Failed to test voice');
+      }
+      
+      setPlaying(false);
+    }
   };
 
   return (

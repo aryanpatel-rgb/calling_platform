@@ -97,7 +97,7 @@ const TestAgent = () => {
     try {
       setCallActive(true);
       setCallDuration(0);
-      const response = await axios.post(`http://localhost:3000/api/agents/${id}/call`, {
+      const response = await axios.post(`http://localhost:3000/api/twilio/agents/${id}/call`, {
         phoneNumber: testPhone
       });
 
@@ -118,7 +118,7 @@ const TestAgent = () => {
 
   const handleEndCall = async () => {
     try {
-      await axios.post(`http://localhost:3000/api/agents/${id}/call/end`);
+      await axios.post(`http://localhost:3000/api/twilio/agents/${id}/call/end`);
       setCallActive(false);
       toast.success('Call ended');
       setMessages(prev => [...prev, {
