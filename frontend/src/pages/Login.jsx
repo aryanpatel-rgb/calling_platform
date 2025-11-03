@@ -97,7 +97,7 @@ const Login = () => {
               </svg>
             </motion.div>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-2">
-              Welcome Back
+              Welcome Back brooo
             </h1>
             <p className="text-gray-600">Sign in to your AI Agent Platform</p>
           </div>
