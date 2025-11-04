@@ -101,6 +101,7 @@ const Dashboard = () => {
         animate={{ opacity: 1, y: 0 }}
         className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary-500 via-secondary-500 to-pink-500 p-8 text-white"
       >
+        
         <div className="relative z-10">
           <h1 className="text-4xl font-bold mb-2">Welcome to AI Agent Platform</h1>
           <p className="text-lg text-white/90 mb-6">

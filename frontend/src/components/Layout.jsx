@@ -26,15 +26,15 @@ const Layout = () => {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
-            <Link to="/" className="flex items-center space-x-2 group">
+            <Link to="/dashboard" className="flex items-center space-x-2 group">
               <motion.div
                 whileHover={{ rotate: 360 }}
                 transition={{ duration: 0.5 }}
-                className="bg-gradient-to-br from-primary-500 to-secondary-500 p-2 rounded-xl"
+                className="bg-gradient-to-br from-brand-primary to-brand-sky p-2 rounded-xl"
               >
                 <Bot className="w-6 h-6 text-white" />
               </motion.div>
-              <span className="text-xl font-bold bg-gradient-to-r from-primary-600 to-secondary-600 bg-clip-text text-transparent">
+              <span className="text-xl font-bold bg-gradient-to-r from-brand-primary to-brand-sky bg-clip-text text-transparent">
                 AI Agent Platform
               </span>
             </Link>
@@ -42,10 +42,10 @@ const Layout = () => {
             {/* Desktop Navigation */}
             <nav className="hidden md:flex items-center space-x-6">
               <Link
-                to="/"
+                to="/dashboard"
                 className={`text-sm font-medium transition-colors ${
-                  location.pathname === '/'
-                    ? 'text-primary-600 dark:text-primary-400'
+                  location.pathname === '/dashboard'
+                    ? 'text-brand-primary dark:text-brand-light'
                     : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
                 }`}
               >
@@ -139,7 +139,7 @@ const Layout = () => {
             >
               <div className="container mx-auto px-4 py-4 space-y-3">
                 <Link
-                  to="/"
+                  to="/dashboard"
                   onClick={() => setMobileMenuOpen(false)}
                   className="block px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
                 >

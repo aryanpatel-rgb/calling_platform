@@ -4,6 +4,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import Dashboard from './pages/Dashboard';
+import Landing from './pages/Landing';
 import AgentBuilder from './pages/AgentBuilder';
 import AgentDetail from './pages/AgentDetail';
 import TestAgent from './pages/TestAgent';
@@ -28,11 +29,12 @@ function App() {
           />
           <Routes>
             {/* Public routes */}
+            <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            
-            {/* Protected routes */}
-            <Route path="/" element={
+
+            {/* Protected app */}
+            <Route path="/dashboard" element={
               <ProtectedRoute>
                 <Layout />
               </ProtectedRoute>
@@ -43,7 +45,7 @@ function App() {
               <Route path="agent/:id/edit" element={<AgentBuilder />} />
               <Route path="agent/:id/test" element={<TestAgent />} />
             </Route>
-            
+
             {/* Catch all route */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
@@ -54,3 +56,5 @@ function App() {
 }
 
 export default App;
+
+
