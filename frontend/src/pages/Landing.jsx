@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { Phone, Play, ShieldCheck, Zap, Globe2, Globe, AlertCircle, ChartBar, Layers, Cpu, MessageSquare, Calendar } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import ExperienceSection from '../components/ExperienceSection ';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 24 },
@@ -123,7 +124,7 @@ const Landing = () => {
             className="relative flex items-center justify-center"
           >
             <div className="relative flex items-center justify-center gap-4 h-24">
-              {[0, 1, 2, 3,4,5,6,7,8,9,10].map((i) => (
+              {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((i) => (
                 <motion.div
                   key={i}
                   className="w-3 h-20 bg-brand-light rounded-full origin-center "
@@ -145,7 +146,7 @@ const Landing = () => {
               alt="voice icon"
             />
             <div className="relative flex items-center justify-center gap-4 h-24">
-              {[0, 1, 2, 3,4,5,6,7,8,9,10].map((i) => (
+              {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((i) => (
                 <motion.div
                   key={i}
                   className="w-3 h-20 bg-brand-light rounded-full origin-center "
@@ -164,7 +165,6 @@ const Landing = () => {
             <div className="absolute h-48 w-48 flex items-center justify-center rounded-full shadow-[0_0_40px_rgba(52,86,157,0.6)]">
               {/* Rotating Gradient Background */}
               <div className="absolute inset-0 rounded-full animate-gradient-spin bg-[conic-gradient(from_0deg,theme(colors.brand.primary),theme(colors.brand.accent),theme(colors.brand.secondary),theme(colors.brand.primary))]" />
-
               {/* Center-anchored music bars inside the orb */}
               <div className="relative flex items-center justify-center gap-3 h-24">
                 {[0, 1, 2, 3].map((i) => (
@@ -213,47 +213,100 @@ const Landing = () => {
       </section>
 
       {/* Capabilities */}
-      <section className="container mx-auto px-6 py-16">
-        <div className="grid md:grid-cols-2 gap-10 items-center">
-          <div className="card">
-            <h3 className="text-xl font-bold mb-2">Supercharge Customer Experiences with AI Voice Agent</h3>
-            <p className="text-brand-muted">Align voice agent with brand personality. Choose tone, accent, and depth that resonate with your customers.</p>
-          </div>
-          <div className="card">
-            <h3 className="text-xl font-bold mb-2">Break the Language Barrier</h3>
-            <p className="text-brand-muted">Support for 100+ languages with dialect preferences to speak where your customers are comfortable.</p>
-          </div>
-        </div>
-      </section>
+      <section className=" max-w-7xl mx-auto px-6 py-16">
+        <motion.h2 className="text-2xl md:text-3xl font-bold text-center mb-10" variants={fadeUp} initial="hidden" whileInView="show">
+          Supercharge Customer Experiences with AI Voice Agent
+        </motion.h2>
 
-      {/* Analytics */}
-      <section className="container mx-auto px-6 py-16">
-        <div className="grid md:grid-cols-2 gap-10 items-center">
-          <div className="card">
-            <h3 className="text-xl font-bold mb-2">Launch Fast. Learn Faster.</h3>
-            <p className="text-brand-muted">Go beyond surface metrics with actionable analytics: sentiment, adherence, and customer satisfaction.</p>
-          </div>
-          <div className="card">
-            <h3 className="text-xl font-bold mb-2">Powerfully built. Seamlessly integrated.</h3>
-            <ul className="space-y-2 text-brand-muted">
-              <li className="flex items-center"><Zap className="w-4 h-4 mr-2 text-brand-accent" /> Best-in-class latency</li>
-              <li className="flex items-center"><Layers className="w-4 h-4 mr-2 text-brand-accent" /> Integrate with existing stack</li>
-              <li className="flex items-center"><ShieldCheck className="w-4 h-4 mr-2 text-brand-accent" /> Secure by design</li>
-              <li className="flex items-center"><MessageSquare className="w-4 h-4 mr-2 text-brand-accent" /> Built-in smart handover</li>
-              <li className="flex items-center"><Globe2 className="w-4 h-4 mr-2 text-brand-accent" /> Enterprise-ready, developer-friendly</li>
-            </ul>
-          </div>
-        </div>
-      </section>
+        <div className="grid md:grid-cols-2 gap-8">
+          {/* Align Voice Agent with Brand Personality */}
+          <motion.div className="relative rounded-3xl overflow-hidden text-center p-0 bg-[#ebecec]" variants={fadeUp} initial="hidden" whileInView="show">
+            <div className=" dark:bg-brand-dark/70 backdrop-blur-md rounded-xl p-4 ">
+              <h3 className="text-xl font-bold mb-1">Align Voice Agent with Brand Personality</h3>
+              <p className="text-sm text-brand-muted max-w-md">
+                Select tone, gender, accent, and voice depth to fit your brand. Choose from warm, energetic, or calm styles that resonate with customers.
+              </p>
+            </div>
+            <img src="/o1.webp" alt="Align Voice Agent" className="max-w-full  mt-5 " />
+          </motion.div>
 
-      {/* CTA */}
-      <section className="container mx-auto px-6 py-20 text-center">
-        <motion.h3 className="text-2xl md:text-3xl font-bold" variants={fadeUp} initial="hidden" whileInView="show">Build your AI call center today</motion.h3>
-        <div className="mt-6 flex justify-center gap-4">
-          <Link to="/register" className="btn-primary">Get Started</Link>
-          <Link to="/login" className="btn-secondary">Sign In</Link>
+          {/* Break the Language Barrier */}
+          <motion.div className="relative rounded-3xl overflow-hidden text-center p-0 bg-pink-50" variants={fadeUp} initial="hidden" whileInView="show">
+            <div className=" dark:bg-brand-dark/70 backdrop-blur-md rounded-xl p-4 ">
+              <h3 className="text-xl font-bold mb-1">Break the Language Barrier</h3>
+              <p className="text-sm text-brand-muted ">
+                Support for 100+ languages and dialects so customers can converse comfortably in their preferred language.
+              </p>
+            </div>
+            <img src="/o5.webp" alt="Break the Language Barrier" className="max-w-full  mt-5 " />
+          </motion.div>
+
+          {/* Take Voice Conversations to the Next Level */}
+          <motion.div className="relative rounded-3xl overflow-hidden  p-0" variants={fadeUp} initial="hidden" whileInView="show">
+            <img src="/o3.png" alt="Next Level Conversations" className="w-full h-full object-cover" />
+            <div className="absolute top-4 left-4 bg-brand-white/80 dark:bg-brand-dark/70 backdrop-blur-md rounded-xl p-4 shadow">
+              <h3 className="text-xl font-bold mb-1">Take Voice Conversations to the Next Level</h3>
+              <p className="text-sm text-brand-muted max-w-md">
+                Real-time AI agents manage nuanced, branching conversations with empathy — no scripts required.
+              </p>
+            </div>
+          </motion.div>
+
+          {/* Launch Fast. Learn Faster. */}
+          <motion.div className="relative rounded-3xl overflow-hidden  p-0" variants={fadeUp} initial="hidden" whileInView="show">
+            <img src="/o4.png" alt="Launch Fast Learn Faster" className="w-full h-full object-cover" />
+            <div className="absolute top-4 left-4 bg-brand-white/80 dark:bg-brand-dark/70 backdrop-blur-md rounded-xl p-4 shadow">
+              <h3 className="text-xl font-bold mb-1">Launch Fast. Learn Faster.</h3>
+              <p className="text-sm text-brand-muted max-w-md">
+                Actionable analytics for sentiment, adherence, and satisfaction help you improve service and meet SLAs quickly.
+              </p>
+            </div>
+          </motion.div>
         </div>
       </section>
+      <ExperienceSection
+        label="Call Center"
+        title="Connect your customers with an"
+        highlight1="engaging"
+        highlight2="satisfying"
+        features={[
+          "More flexibility, more significant savings and higher efficiency",
+          "Safe, reliable, and high concurrency",
+          "Flexible IVR process configuration",
+          "Suitable for inbound and outbound calling",
+        ]}
+        image="/after_0.png"
+        caption="Real-time call metrics & recordings"
+      />
+
+      <ExperienceSection
+        label="Live Chat"
+        title="Provide a seamless and interactive live chat experience for your customers."
+        highlight1="real-time"
+        highlight2="support "
+        features={[
+          "Improve the conversational experience and increase the customer retention rate for online businesses",
+          "Reliable and fast chat with a range of features",
+          "Customer information, quick reply, knowledge base supported online communication",
+        ]}
+        image="/after_1.png"
+        caption="Real-time chat metrics & recordings"
+        reverse={true}
+      />
+
+      <ExperienceSection
+        label="Quality Inspection"
+        title="Visually optimize the"
+        highlight1="agent-customer"
+        highlight2="interaction"
+        features={[
+          "Continuously measure and monitor agent performance",
+          "Automatically detect customer emotions through the change of tone and volume, language use.",
+          "Improve agent efficiency and customer satisfaction",
+        ]}
+        image="/after_3.png"
+        caption="Quality inspection metrics & recordings"
+      />
     </div>
   );
 };
