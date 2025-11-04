@@ -98,6 +98,27 @@ CREATE TABLE IF NOT EXISTS function_executions (
     executed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Call History table for detailed call tracking
+CREATE TABLE IF NOT EXISTS call_history (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    agent_id UUID NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
+    conversation_id UUID REFERENCES conversations(id) ON DELETE CASCADE,
+    call_sid VARCHAR(255) UNIQUE,
+    from_number VARCHAR(20),
+    to_number VARCHAR(20),
+    status VARCHAR(20) DEFAULT 'initiated' CHECK (status IN ('initiated', 'ringing', 'answered', 'completed', 'failed', 'busy', 'no-answer')),
+    direction VARCHAR(20) DEFAULT 'outbound' CHECK (direction IN ('inbound', 'outbound')),
+    duration INTEGER DEFAULT 0,
+    recording_url TEXT,
+    transcript TEXT,
+    cost DECIMAL(10,4),
+    started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    answered_at TIMESTAMP,
+    ended_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Indexes for better query performance
 CREATE INDEX IF NOT EXISTS idx_agents_user_id ON agents(user_id);
 CREATE INDEX IF NOT EXISTS idx_agents_status ON agents(status);
@@ -107,6 +128,9 @@ CREATE INDEX IF NOT EXISTS idx_conversations_agent_id ON conversations(agent_id)
 CREATE INDEX IF NOT EXISTS idx_conversations_status ON conversations(status);
 CREATE INDEX IF NOT EXISTS idx_messages_conversation_id ON messages(conversation_id);
 CREATE INDEX IF NOT EXISTS idx_function_executions_conversation_id ON function_executions(conversation_id);
+CREATE INDEX IF NOT EXISTS idx_call_history_agent_id ON call_history(agent_id);
+CREATE INDEX IF NOT EXISTS idx_call_history_call_sid ON call_history(call_sid);
+CREATE INDEX IF NOT EXISTS idx_call_history_status ON call_history(status);
 
 -- Update updated_at trigger function
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -125,6 +149,9 @@ CREATE TRIGGER update_agents_updated_at BEFORE UPDATE ON agents
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_agent_functions_updated_at BEFORE UPDATE ON agent_functions
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_call_history_updated_at BEFORE UPDATE ON call_history
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Create default user for development (optional)

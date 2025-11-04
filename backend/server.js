@@ -8,6 +8,8 @@ import chatRoutes from './routes/chat.js';
 import statsRoutes from './routes/stats.js';
 import authRoutes from './routes/auth.js';
 import audioRoutes from './routes/audio.js';
+import sseRoutes from './routes/sse.js';
+import testRoutes from './routes/test.js';
 import { initializeDatabase, initializeSchema, checkConnection } from './db/database.js';
 
 // Security middleware imports
@@ -44,6 +46,8 @@ app.use('/api/twilio', twilioRoutes);
 app.use('/api/calcom', calComRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/audio', audioRoutes);
+app.use('/api/sse', sseRoutes);
+app.use('/api/test', testRoutes);
 app.use('/api', chatRoutes);
 
 // Health check

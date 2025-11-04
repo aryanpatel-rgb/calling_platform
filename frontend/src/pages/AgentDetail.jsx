@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, Play, Settings, Trash2, Calendar, Phone, MessageSquare, Edit, Power, PowerOff } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import CallHistory from '../components/CallHistory';
 
 const AgentDetail = () => {
   const { id } = useParams();
@@ -323,6 +324,11 @@ const AgentDetail = () => {
             </div>
           )}
         </motion.div>
+      )}
+
+      {/* Call History (for voice call agents) */}
+      {agent.type === 'voice_call' && (
+        <CallHistory agentId={agent.id} />
       )}
     </div>
   );

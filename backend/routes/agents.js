@@ -5,6 +5,7 @@ import { authenticateToken } from '../utils/auth.js';
 import { generateSpeech } from '../services/elevenLabsService.js';
 import { validateAgent as validateAgentMiddleware, validateAgentId } from '../middleware/validation.js';
 import { agentLimiter } from '../middleware/rateLimiting.js';
+import * as callHistoryRepo from '../db/repositories/callHistoryRepository.js';
 
 const router = express.Router();
 
@@ -136,6 +137,67 @@ router.post('/voice/test', authenticateToken, async (req, res) => {
       error: true, 
       message: `Failed to generate voice sample: ${error.message}` 
     });
+  }
+});
+
+// Get call history for an agent
+router.get('/:id/calls', authenticateToken, async (req, res) => {
+  try {
+    const agent = await agentRepo.getAgentByIdAndUser(req.params.id, req.user.id);
+    if (!agent) {
+      return res.status(404).json({ 
+        error: true, 
+        message: 'Agent not found or you do not have permission to access it.'
+      });
+    }
+
+    const limit = parseInt(req.query.limit) || 50;
+    const offset = parseInt(req.query.offset) || 0;
+
+    const calls = await callHistoryRepo.getCallHistoryByAgent(req.params.id, limit, offset);
+    res.json(calls);
+  } catch (error) {
+    console.error('Get call history error:', error);
+    res.status(500).json({ error: true, message: error.message });
+  }
+});
+
+// Get call statistics for an agent
+router.get('/:id/calls/stats', authenticateToken, async (req, res) => {
+  try {
+    const agent = await agentRepo.getAgentByIdAndUser(req.params.id, req.user.id);
+    if (!agent) {
+      return res.status(404).json({ 
+        error: true, 
+        message: 'Agent not found or you do not have permission to access it.'
+      });
+    }
+
+    const stats = await callHistoryRepo.getCallStatsByAgent(req.params.id);
+    res.json(stats);
+  } catch (error) {
+    console.error('Get call stats error:', error);
+    res.status(500).json({ error: true, message: error.message });
+  }
+});
+
+// Get recent call activity for an agent
+router.get('/:id/calls/activity', authenticateToken, async (req, res) => {
+  try {
+    const agent = await agentRepo.getAgentByIdAndUser(req.params.id, req.user.id);
+    if (!agent) {
+      return res.status(404).json({ 
+        error: true, 
+        message: 'Agent not found or you do not have permission to access it.'
+      });
+    }
+
+    const days = parseInt(req.query.days) || 7;
+    const activity = await callHistoryRepo.getRecentCallActivity(req.params.id, days);
+    res.json(activity);
+  } catch (error) {
+    console.error('Get call activity error:', error);
+    res.status(500).json({ error: true, message: error.message });
   }
 });
 

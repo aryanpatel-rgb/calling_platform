@@ -4,6 +4,8 @@ import * as agentRepo from '../db/repositories/agentRepository.js';
 import { initiateCall, handleVoiceWebhook, endCall, processUserSpeech } from '../services/twilioService.js';
 import { validateTwilioCall, validateAgentId } from '../middleware/validation.js';
 import { voiceLimiter } from '../middleware/rateLimiting.js';
+import * as callHistoryRepo from '../db/repositories/callHistoryRepository.js';
+import { broadcastCallUpdate, broadcastStatsUpdate } from './sse.js';
 
 const router = express.Router();
 
@@ -145,6 +147,82 @@ router.post('/voice/partial', async (req, res) => {
   } catch (error) {
     console.error('Partial speech error:', error);
     res.status(200).send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
+  }
+});
+
+// Handle call status updates from Twilio
+router.post('/voice/status', async (req, res) => {
+  try {
+    const { CallSid, CallStatus, AnsweredBy, Duration } = req.body;
+    
+    console.log(`Call status update: ${CallSid} - ${CallStatus}`);
+    
+    // Update call history in database
+    const updateData = { status: CallStatus.toLowerCase() };
+    
+    if (CallStatus === 'answered') {
+      updateData.answered_at = new Date();
+    } else if (['completed', 'failed', 'busy', 'no-answer'].includes(CallStatus.toLowerCase())) {
+      updateData.ended_at = new Date();
+      if (Duration) {
+        updateData.duration = parseInt(Duration);
+      }
+    }
+    
+    const updatedCall = await callHistoryRepo.updateCallBySid(CallSid, updateData);
+    
+    if (updatedCall) {
+      // Broadcast real-time update to connected clients
+      broadcastCallUpdate(updatedCall.agent_id, {
+        id: updatedCall.id,
+        call_sid: CallSid,
+        status: CallStatus.toLowerCase(),
+        duration: updatedCall.duration,
+        answered_at: updatedCall.answered_at,
+        ended_at: updatedCall.ended_at
+      });
+      
+      // If call ended, also broadcast updated stats
+      if (['completed', 'failed', 'busy', 'no-answer'].includes(CallStatus.toLowerCase())) {
+        const stats = await callHistoryRepo.getCallStatsByAgent(updatedCall.agent_id);
+        broadcastStatsUpdate(updatedCall.agent_id, stats);
+      }
+    }
+    
+    res.status(200).send('OK');
+  } catch (error) {
+    console.error('Call status update error:', error);
+    res.status(500).json({ error: true, message: error.message });
+  }
+});
+
+// Handle recording status updates from Twilio
+router.post('/voice/recording', async (req, res) => {
+  try {
+    const { CallSid, RecordingUrl, RecordingStatus } = req.body;
+    
+    console.log(`Recording status update: ${CallSid} - ${RecordingStatus}`);
+    
+    if (RecordingStatus === 'completed' && RecordingUrl) {
+      const updatedCall = await callHistoryRepo.updateCallBySid(CallSid, {
+        recording_url: RecordingUrl
+      });
+      
+      if (updatedCall) {
+        // Broadcast recording update to connected clients
+        broadcastCallUpdate(updatedCall.agent_id, {
+          id: updatedCall.id,
+          call_sid: CallSid,
+          recording_url: RecordingUrl,
+          has_recording: true
+        });
+      }
+    }
+    
+    res.status(200).send('OK');
+  } catch (error) {
+    console.error('Recording status update error:', error);
+    res.status(500).json({ error: true, message: error.message });
   }
 });
 

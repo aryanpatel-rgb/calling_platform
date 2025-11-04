@@ -3,6 +3,8 @@ import { generateSpeech } from './elevenLabsService.js';
 import { processMessage, buildSystemPrompt } from './aiService.js';
 import { executeFunction } from './functionExecutor.js';
 import cacheService from './cacheService.js';
+import * as callHistoryRepo from '../db/repositories/callHistoryRepository.js';
+import * as conversationRepo from '../db/repositories/conversationRepository.js';
 
 // Store active calls (in production, use a database)
 const activeCalls = new Map();
@@ -26,11 +28,27 @@ export async function initiateCall(agent, phoneNumber) {
       recordingStatusCallback: `${process.env.SERVER_URL || 'http://localhost:3000'}/api/twilio/voice/recording`
     });
 
+    // Create conversation for this call
+    const conversation = await conversationRepo.createConversation(agent.id, 'call');
+
+    // Create call history record
+    await callHistoryRepo.createCall({
+      agentId: agent.id,
+      conversationId: conversation.id,
+      callSid: call.sid,
+      fromNumber: fromNumber,
+      toNumber: phoneNumber,
+      status: 'initiated',
+      direction: 'outbound',
+      startedAt: new Date()
+    });
+
     activeCalls.set(agent.id, {
       callSid: call.sid,
       phoneNumber,
       status: 'initiated',
-      startedAt: new Date()
+      startedAt: new Date(),
+      conversationId: conversation.id
     });
 
     return call.sid;

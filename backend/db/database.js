@@ -122,11 +122,152 @@ export async function initializeSchema() {
   const __dirname = path.dirname(__filename);
   
   try {
-    const schemaPath = path.join(__dirname, 'schema.sql');
+    console.log('🔄 Initializing database schema...');
+    
+    const schemaPath = path.join(process.cwd(), 'db', 'schema.sql');
     const schema = fs.readFileSync(schemaPath, 'utf8');
     
-    await poolQuery(schema);
-    console.log('✅ Database schema initialized');
+    // Advanced SQL statement parser that handles dollar-quoted strings and functions
+    function parseSQL(sql) {
+      const statements = [];
+      let current = '';
+      let inDollarQuote = false;
+      let dollarTag = '';
+      let inSingleQuote = false;
+      let inDoubleQuote = false;
+      let inComment = false;
+      
+      for (let i = 0; i < sql.length; i++) {
+        const char = sql[i];
+        const nextChar = sql[i + 1];
+        const prevChar = sql[i - 1];
+        
+        // Handle line comments
+        if (char === '-' && nextChar === '-' && !inDollarQuote && !inSingleQuote && !inDoubleQuote) {
+          inComment = true;
+          // Skip the comment line entirely, don't add to current statement
+          while (i < sql.length && sql[i] !== '\n') {
+            i++;
+          }
+          if (i < sql.length && sql[i] === '\n') {
+            current += '\n'; // Keep the newline for formatting
+            inComment = false;
+          }
+          continue;
+        }
+        
+        if (inComment) {
+          continue; // Skip comment characters entirely
+        }
+        
+        // Handle dollar-quoted strings ($$, $tag$, etc.)
+        if (char === '$' && !inSingleQuote && !inDoubleQuote) {
+          if (!inDollarQuote) {
+            // Starting dollar quote - find the tag
+            let tagEnd = i + 1;
+            while (tagEnd < sql.length && sql[tagEnd] !== '$') {
+              tagEnd++;
+            }
+            if (tagEnd < sql.length) {
+              dollarTag = sql.substring(i, tagEnd + 1);
+              inDollarQuote = true;
+              current += char;
+              continue;
+            }
+          } else {
+            // Check if this ends the current dollar quote
+            const possibleEndTag = sql.substring(i, i + dollarTag.length);
+            if (possibleEndTag === dollarTag) {
+              inDollarQuote = false;
+              current += dollarTag;
+              i += dollarTag.length - 1;
+              continue;
+            }
+          }
+        }
+        
+        // Handle regular quotes
+        if (!inDollarQuote) {
+          if (char === "'" && prevChar !== '\\') {
+            inSingleQuote = !inSingleQuote;
+          } else if (char === '"' && prevChar !== '\\') {
+            inDoubleQuote = !inDoubleQuote;
+          }
+        }
+        
+        // Handle statement termination
+        if (char === ';' && !inDollarQuote && !inSingleQuote && !inDoubleQuote) {
+          current += char;
+          const statement = current.trim();
+          if (statement && !statement.startsWith('--')) {
+            statements.push(statement);
+          }
+          current = '';
+          continue;
+        }
+        
+        current += char;
+      }
+      
+      // Add any remaining content as the last statement
+      const lastStatement = current.trim();
+      if (lastStatement && !lastStatement.startsWith('--')) {
+        statements.push(lastStatement);
+      }
+      
+      return statements;
+    }
+    
+    // Debug: Log the first 1000 characters of the schema to see what we're parsing
+    console.log('📄 Schema file content (first 1000 chars):');
+    console.log(schema.substring(0, 1000));
+    console.log('📄 Schema file content (last 500 chars):');
+    console.log(schema.substring(schema.length - 500));
+    
+    const statements = parseSQL(schema);
+    console.log(`📝 Found ${statements.length} SQL statements to execute`);
+    
+    // Debug: Log the first few characters of each statement to identify them
+    statements.forEach((stmt, index) => {
+      const preview = stmt.substring(0, 100).replace(/\s+/g, ' ').trim();
+      console.log(`Statement ${index + 1}: ${preview}...`);
+    });
+    
+    let successCount = 0;
+    let errorCount = 0;
+    
+    // Execute each statement individually
+    for (let i = 0; i < statements.length; i++) {
+      const statement = statements[i];
+      if (!statement || statement.length === 0) continue;
+      
+      try {
+        await poolQuery(statement);
+        successCount++;
+        console.log(`✅ Statement ${i + 1} executed successfully`);
+      } catch (error) {
+        errorCount++;
+        
+        // Check if it's an "already exists" error that we can safely ignore
+        const errorMessage = error.message.toLowerCase();
+        const isIgnorableError = 
+          errorMessage.includes('already exists') ||
+          errorMessage.includes('duplicate key') ||
+          errorMessage.includes('relation') && errorMessage.includes('already exists') ||
+          errorMessage.includes('trigger') && errorMessage.includes('already exists') ||
+          errorMessage.includes('function') && errorMessage.includes('already exists');
+        
+        if (isIgnorableError) {
+          console.log(`⚠️  Skipping existing database object: ${error.message}`);
+        } else {
+          console.error(`❌ Error executing statement: ${error.message}`);
+          console.error(`Statement content: ${statement.substring(0, 200)}...`);
+          // Don't throw here - continue with other statements
+        }
+      }
+    }
+    
+    console.log(`✅ Schema initialization completed: ${successCount} successful, ${errorCount} errors`);
     return true;
   } catch (error) {
     console.error('❌ Schema initialization failed:', error.message);
