@@ -107,7 +107,7 @@ const Landing = () => {
       {/* Use Cases */}
       <section
         id="demo"
-        className="container mx-auto px-6 py-20 relative flex flex-col items-center"
+        className="container mx-auto  py-20 relative flex flex-col items-center"
       >
         {/* Heading */}
         <h2 className="text-3xl md:text-4xl font-bold text-center">
@@ -118,46 +118,45 @@ const Landing = () => {
         </p>
 
         <div className=' bg-slate-100 rounded-[20px] mx-auto w-full max-w-7xl'>
-
           <motion.div
             initial={{ scale: 0.9 }}
             className="relative flex items-center justify-center"
           >
-            <div className="relative flex items-end justify-center gap-3 h-24">
+            <div className="relative flex items-center justify-center gap-4 h-24">
               {[0, 1, 2, 3,4,5,6,7,8,9,10].map((i) => (
                 <motion.div
                   key={i}
+                  className="w-3 h-20 bg-brand-light rounded-full origin-center "
                   animate={{
-                    height: ["40%", "90%", "50%", "80%", "40%"],
+                    scaleY: [0.4, 0.9, 0.5, 0.8, 0.4],
                   }}
                   transition={{
                     duration: 1 + i * 0.2,
                     repeat: Infinity,
                     ease: "easeInOut",
                   }}
-                  className="w-2 bg-blue-300 rounded-full shadow-[0_0_10px_rgba(255,255,255,0.7)]"
                 />
               ))}
             </div>
             {/* Background Shape */}
             <img
               src="/phn-shape.svg"
-              className="w-[400px] max-w-[480px]"
+              className="w-[400px] max-w-[480px] mr-6 ml-6"
               alt="voice icon"
             />
-            <div className="relative flex items-end justify-center gap-3 h-24">
+            <div className="relative flex items-center justify-center gap-4 h-24">
               {[0, 1, 2, 3,4,5,6,7,8,9,10].map((i) => (
                 <motion.div
                   key={i}
+                  className="w-3 h-20 bg-brand-light rounded-full origin-center "
                   animate={{
-                    height: ["40%", "90%", "50%", "80%", "40%"],
+                    scaleY: [0.4, 0.9, 0.5, 0.8, 0.4],
                   }}
                   transition={{
                     duration: 1 + i * 0.2,
                     repeat: Infinity,
                     ease: "easeInOut",
                   }}
-                  className="w-2 bg-blue-300 rounded-full shadow-[0_0_10px_rgba(255,255,255,0.7)]"
                 />
               ))}
             </div>
@@ -166,20 +165,20 @@ const Landing = () => {
               {/* Rotating Gradient Background */}
               <div className="absolute inset-0 rounded-full animate-gradient-spin bg-[conic-gradient(from_0deg,theme(colors.brand.primary),theme(colors.brand.accent),theme(colors.brand.secondary),theme(colors.brand.primary))]" />
 
-              {/* 4 Music Bars (stay static) */}
-              <div className="relative flex items-end justify-center gap-3 h-24">
+              {/* Center-anchored music bars inside the orb */}
+              <div className="relative flex items-center justify-center gap-3 h-24">
                 {[0, 1, 2, 3].map((i) => (
                   <motion.div
                     key={i}
+                    className="w-2 h-16 bg-white rounded-full origin-center shadow-[0_0_10px_rgba(255,255,255,0.7)]"
                     animate={{
-                      height: ["40%", "90%", "50%", "80%", "40%"],
+                      scaleY: [0.4, 0.9, 0.5, 0.8, 0.4],
                     }}
                     transition={{
                       duration: 1 + i * 0.2,
                       repeat: Infinity,
                       ease: "easeInOut",
                     }}
-                    className="w-2 bg-white rounded-full shadow-[0_0_10px_rgba(255,255,255,0.7)]"
                   />
                 ))}
               </div>
