@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { Phone, Play, ShieldCheck, Zap, Globe2, Globe, AlertCircle, ChartBar, Layers, Cpu, MessageSquare, Calendar } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import ExperienceSection from '../components/ExperienceSection ';
+import SiteHeader from '../components/SiteHeader';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 24 },
@@ -11,6 +12,7 @@ const fadeUp = {
 const Landing = () => {
   return (
     <div className="min-h-screen bg-brand-white dark:bg-brand-dark">
+      <SiteHeader />
       {/* Hero */}
       <section className="gradient-bg relative overflow-hidden">
         <div className="container max-w-7xl mx-auto px-6 py-20 md:py-28">
@@ -213,7 +215,7 @@ const Landing = () => {
       </section>
 
       {/* Capabilities */}
-      <section className=" max-w-7xl mx-auto px-6 py-16">
+      <section id="features" className=" max-w-7xl mx-auto px-6 py-16">
         <motion.h2 className="text-2xl md:text-3xl font-bold text-center mb-10" variants={fadeUp} initial="hidden" whileInView="show">
           Supercharge Customer Experiences with AI Voice Agent
         </motion.h2>

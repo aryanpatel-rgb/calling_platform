@@ -214,7 +214,7 @@ const Dashboard = () => {
             <p className="text-gray-600 dark:text-gray-400 mb-6">
               Create your first AI agent to get started
             </p>
-            <Link to="/agent/new" className="btn-primary inline-flex items-center space-x-2">
+            <Link to="/dashboard/agent/new" className="btn-primary inline-flex items-center space-x-2">
               <Plus className="w-5 h-5" />
               <span>Create Agent</span>
             </Link>

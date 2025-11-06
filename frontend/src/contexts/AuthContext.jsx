@@ -17,6 +17,8 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState(localStorage.getItem('auth_token'));
 
+  const backendUrl = import.meta.env.VITE_BACKEND_URL;
+
   // Configure axios defaults
   useEffect(() => {
     if (token) {
@@ -35,7 +37,7 @@ export const AuthProvider = ({ children }) => {
           setToken(savedToken);
           axios.defaults.headers.common['Authorization'] = `Bearer ${savedToken}`;
           
-          const response = await axios.get('http://localhost:3000/api/auth/verify');
+          const response = await axios.get(`${backendUrl}/api/auth/verify`);
           if (response.data.success) {
             setUser(response.data.user);
           } else {
@@ -59,7 +61,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      const response = await axios.post('http://localhost:3000/api/auth/login', {
+      const response = await axios.post(`${backendUrl}/api/auth/login`, {
         email,
         password
       });
@@ -87,7 +89,7 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (name, email, password) => {
     try {
-      const response = await axios.post('http://localhost:3000/api/auth/register', {
+      const response = await axios.post(`${backendUrl}/api/auth/register`, {
         name,
         email,
         password
@@ -116,9 +118,8 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      // Call logout endpoint (optional, mainly for tracking)
       if (token) {
-        await axios.post('http://localhost:3000/api/auth/logout');
+        await axios.post(`${backendUrl}/api/auth/logout`);
       }
     } catch (error) {
       console.error('Logout API call failed:', error);
@@ -134,7 +135,7 @@ export const AuthProvider = ({ children }) => {
 
   const updateProfile = async (profileData) => {
     try {
-      const response = await axios.put('http://localhost:3000/api/auth/profile', profileData);
+      const response = await axios.put(`${backendUrl}/api/auth/profile`, profileData);
       
       if (response.data.success) {
         setUser(response.data.user);
@@ -153,7 +154,7 @@ export const AuthProvider = ({ children }) => {
 
   const getProfile = async () => {
     try {
-      const response = await axios.get('http://localhost:3000/api/auth/profile');
+      const response = await axios.get(`${backendUrl}/api/auth/profile`);
       
       if (response.data.success) {
         setUser(response.data.user);

@@ -52,7 +52,7 @@ const Layout = () => {
                 Dashboard
               </Link>
               <Link
-                to="/agent/new"
+                to="/dashboard/agent/new"
                 className="btn-primary"
               >
                 Create Agent
@@ -146,7 +146,7 @@ const Layout = () => {
                   Dashboard
                 </Link>
                 <Link
-                  to="/agent/new"
+                  to="/dashboard/agent/new"
                   onClick={() => setMobileMenuOpen(false)}
                   className="block btn-primary text-center"
                 >

@@ -65,14 +65,14 @@ const AgentCard = ({ agent }) => {
           {showMenu && (
             <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-10">
               <Link
-                to={`/agent/${agent.id}`}
+                to={`/dashboard/agent/${agent.id}`}
                 className="flex items-center space-x-2 px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-t-lg"
               >
                 <Settings className="w-4 h-4" />
                 <span>Settings</span>
               </Link>
               <Link
-                to={`/agent/${agent.id}/test`}
+                to={`/dashboard/agent/${agent.id}/test`}
                 className="flex items-center space-x-2 px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700"
               >
                 <Play className="w-4 h-4" />
@@ -113,13 +113,13 @@ const AgentCard = ({ agent }) => {
       {/* Actions */}
       <div className="flex space-x-2">
         <Link
-          to={`/agent/${agent.id}/test`}
+          to={`/dashboard/agent/${agent.id}/test`}
           className="flex-1 btn-primary text-center text-sm"
         >
           Test Agent
         </Link>
         <Link
-          to={`/agent/${agent.id}`}
+          to={`/dashboard/agent/${agent.id}`}
           className="flex-1 btn-secondary text-center text-sm"
         >
           Configure
