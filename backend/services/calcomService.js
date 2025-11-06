@@ -1,3 +1,4 @@
+
 import axios from 'axios';
 import { DateTime } from 'luxon';
  
@@ -234,12 +235,13 @@ export async function executeCalComFunction(functionConfig, parameters) {
   const { sub_type, api_key: apiKey, event_type_id, timezone } = functionConfig;
 
   const userTimezone = await getUserProfile(apiKey);
+  const userTimeZone = userTimezone?.user?.timeZone || timezone || 'UTC';
   const eventId = await getEventType(apiKey, event_type_id);
 
   const timeResult = convertToCalTime({
     date: parameters.date,
     time: parameters.time,
-    timeZone: userTimezone?.timezone || timezone || 'UTC',
+    timeZone: userTimeZone,
     duration: eventId?.length || 30
   });
 
@@ -257,13 +259,13 @@ export async function executeCalComFunction(functionConfig, parameters) {
       eventTypeId: event_type_id,
       startDate: start,
       endDate: end,
-      timezone: userTimezone?.timezone || timezone || 'UTC'
+      timezone: userTimeZone
     });
   } else if (sub_type === 'book_appointment') {
     let startTime = start;
  
     if (!startTime && parameters.date && parameters.time) {
-      startTime = parseDateTimeToISO(parameters.date, parameters.time, userTimezone?.timezone || timezone || 'UTC');
+      startTime = parseDateTimeToISO(parameters.date, parameters.time, userTimeZone);
     }
  
     if (!startTime) throw new Error('⚠️ Missing startTime or date+time parameters');
@@ -272,9 +274,9 @@ export async function executeCalComFunction(functionConfig, parameters) {
       apiKey,
       eventTypeId: event_type_id,
       startTime,
-      attendeeName: userTimezone?.name || parameters.attendee_name || 'Guest User',
-      attendeeEmail: userTimezone?.email || parameters.attendee_email || 'guest@example.com',
-      attendeeTimezone: userTimezone?.timezone || parameters.attendee_timezone || timezone || 'UTC',
+      attendeeName: userTimezone?.user?.username || parameters.attendee_name || 'Guest User',
+      attendeeEmail: userTimezone?.user?.email || parameters.attendee_email || 'guest@example.com',
+      attendeeTimezone: userTimeZone,
     });
   }
  

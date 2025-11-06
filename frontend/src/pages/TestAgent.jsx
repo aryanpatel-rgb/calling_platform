@@ -72,7 +72,7 @@ const TestAgent = () => {
         content: response.data.message,
         functionCalls: response.data.functionCalls,
         timestamp: new Date()
-      };
+      }; 
       setMessages(prev => [...prev, botMessage]);
     } catch (error) {
       console.error('Error sending message:', error);

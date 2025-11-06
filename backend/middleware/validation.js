@@ -133,6 +133,7 @@ export const validateChatMessage = [
     .isLength({ min: 1, max: 2000 })
     .withMessage('Message must be between 1 and 2000 characters'),
   body('agentId')
+    .optional()
     .isUUID()
     .withMessage('Invalid agent ID format'),
   body('conversationId')

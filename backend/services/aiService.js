@@ -76,6 +76,7 @@ export function buildSystemPrompt(agent) {
   prompt += '- If asked to repeat, give a brief summary, not the full response\n';
   prompt += '- Ask follow-up questions to keep the conversation flowing\n';
   prompt += '- Remember: Users are listening, not reading - be concise!\n';
+  prompt += '- you need to give the answer from only the prompt if user are ask something outside of the prompt then obviously you can not answer that but if user are ask the question near about the prompt then you need to give the answer that but if totaly of out the context then not give the answer that \n';
   prompt += '\n=== USER INSTRUCTIONS ===\n';
   prompt += 'Follow these rules when responding and make sure you are follow the prompt :\n';
   prompt += '- Keep responses concise and relevant to the user\'s question\n';
@@ -104,7 +105,6 @@ export function buildSystemPrompt(agent) {
     prompt += '- After the function executes, you will receive the result and should provide a natural language response to the user\n';
     prompt += '- Do not make up function results - wait for actual execution\n';
   }
-
 
   return prompt;
 }
@@ -186,9 +186,33 @@ export async function generateResponse(messages, options = {}) {
   }
 }
 
+/**
+ * Stream a chat completion response (token-by-token)
+ */
+export async function streamResponse(messages, options = {}) {
+  try {
+    const model = options.model || 'gpt-3.5-turbo';
+    const temperature = parseFloat(options.temperature) || 0.7;
+    const maxTokens = parseInt(options.maxTokens) || 1000;
+
+    const stream = await openai.chat.completions.create({
+      model,
+      messages,
+      temperature,
+      max_tokens: maxTokens,
+      stream: true
+    });
+
+    return stream; // Async iterable of ChatCompletionChunk
+  } catch (error) {
+    console.error('Stream Response Error:', error);
+    throw new Error(`Failed to stream response: ${error.message}`);
+  }
+}
 export default {
   processMessage,
   generateResponse,
-  buildSystemPrompt
+  buildSystemPrompt,
+  streamResponse
 };
 
