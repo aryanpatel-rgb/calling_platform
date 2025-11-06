@@ -8,7 +8,7 @@ const AgentTypeSelection = ({ selectedType, onSelect }) => {
       name: 'Chatbot Agent',
       description: 'Text-based conversational AI with custom functions',
       icon: MessageSquare,
-      color: 'from-blue-500 to-cyan-500',
+      color: 'from-brand-primary to-brand-sky',
       features: [
         'Text-based conversations',
         'Custom function calling',
@@ -21,7 +21,7 @@ const AgentTypeSelection = ({ selectedType, onSelect }) => {
       name: 'Voice Call Agent',
       description: 'AI voice agent with phone integration and testing',
       icon: Phone,
-      color: 'from-purple-500 to-pink-500',
+      color: 'from-brand-secondary to-brand-accent',
       features: [
         'Voice conversations',
         'Phone call integration',
@@ -55,7 +55,7 @@ const AgentTypeSelection = ({ selectedType, onSelect }) => {
               className={`relative overflow-hidden rounded-2xl p-6 text-left transition-all duration-300 ${
                 isSelected
                   ? 'bg-gradient-to-br ' + type.color + ' text-white shadow-2xl'
-                  : 'bg-gray-50 dark:bg-gray-800/50 border-2 border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-700'
+                  : 'bg-gray-50 dark:bg-gray-800/50 border-2 border-gray-200 dark:border-gray-700 hover:border-brand-primary dark:hover:border-brand-primary'
               }`}
             >
               {/* Selection Indicator */}
@@ -74,7 +74,7 @@ const AgentTypeSelection = ({ selectedType, onSelect }) => {
                 isSelected ? 'bg-white/20' : 'bg-white dark:bg-gray-900'
               }`}>
                 <Icon className={`w-8 h-8 ${
-                  isSelected ? 'text-white' : 'text-primary-600'
+                  isSelected ? 'text-white' : 'text-brand-primary'
                 }`} />
               </div>
 
@@ -101,11 +101,11 @@ const AgentTypeSelection = ({ selectedType, onSelect }) => {
                     }`}
                   >
                     <div className={`w-1.5 h-1.5 rounded-full mr-2 ${
-                      isSelected ? 'bg-white' : 'bg-primary-500'
+                      isSelected ? 'bg-white' : 'bg-brand-primary'
                     }`} />
-                    {feature}
-                  </li>
-                ))}
+                  {feature}
+                </li>
+              ))}
               </ul>
 
               {/* Decorative gradient */}

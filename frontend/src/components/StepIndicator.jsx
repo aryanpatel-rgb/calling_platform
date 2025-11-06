@@ -7,7 +7,7 @@ const StepIndicator = ({ steps, currentStep }) => {
       {/* Progress Line */}
       <div className="absolute top-5 left-0 right-0 h-0.5 bg-gray-200 dark:bg-gray-800">
         <motion.div
-          className="h-full bg-gradient-to-r from-primary-500 to-secondary-500"
+          className="h-full bg-gradient-to-r from-brand-sky to-brand-secondary"
           initial={{ width: '0%' }}
           animate={{
             width: `${((steps.findIndex(s => s.id === currentStep)) / (steps.length - 1)) * 100}%`
@@ -27,9 +27,9 @@ const StepIndicator = ({ steps, currentStep }) => {
               <motion.div
                 className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${
                   isCompleted
-                    ? 'bg-primary-500 border-primary-500 text-white'
+                    ? 'bg-brand-secondary border-brand-secondary text-white'
                     : isCurrent
-                    ? 'bg-white dark:bg-gray-900 border-primary-500 text-primary-500'
+                    ? 'bg-white dark:bg-gray-900 border-brand-secondary text-brand-secondary'
                     : 'bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-gray-400'
                 }`}
                 whileHover={{ scale: 1.05 }}
@@ -45,7 +45,7 @@ const StepIndicator = ({ steps, currentStep }) => {
                 <p
                   className={`text-sm font-medium ${
                     isCurrent
-                      ? 'text-primary-600 dark:text-primary-400'
+                      ? 'text-brand-secondary'
                       : 'text-gray-600 dark:text-gray-400'
                   }`}
                 >

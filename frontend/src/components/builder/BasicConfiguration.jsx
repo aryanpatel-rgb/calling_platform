@@ -68,7 +68,7 @@ const BasicConfiguration = ({ data, onChange }) => {
         {/* Model Selection */}
         <div>
           <label className="block text-sm font-medium mb-2 flex items-center">
-            <Settings2 className="w-4 h-4 mr-2 text-primary-500" />
+            <Settings2 className="w-4 h-4 mr-2 text-brand-primary" />
             AI Model
           </label>
           <select
@@ -86,7 +86,7 @@ const BasicConfiguration = ({ data, onChange }) => {
 
         {/* Advanced Settings */}
         <details className="group">
-          <summary className="cursor-pointer text-sm font-medium text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 flex items-center">
+          <summary className="cursor-pointer text-sm font-medium text-brand-primary hover:text-brand-secondary flex items-center">
             <Settings2 className="w-4 h-4 mr-2" />
             Advanced Settings
           </summary>

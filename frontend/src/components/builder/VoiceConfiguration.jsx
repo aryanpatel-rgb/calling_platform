@@ -121,7 +121,7 @@ const VoiceConfiguration = ({ voiceSettings, onChange }) => {
         <div className="card bg-gray-50 dark:bg-gray-800/50">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center space-x-2">
-              <Volume2 className="w-5 h-5 text-primary-600" />
+              <Volume2 className="w-5 h-5 text-brand-primary" />
               <span className="font-medium">Voice Preview</span>
             </div>
             <button

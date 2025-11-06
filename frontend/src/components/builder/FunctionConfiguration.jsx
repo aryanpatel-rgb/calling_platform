@@ -62,7 +62,7 @@ const FunctionConfiguration = ({ functions, onChange }) => {
               </p>
             </div>
           </div>
-          <Plus className="w-5 h-5 text-gray-400 group-hover:text-primary-500" />
+          <Plus className="w-5 h-5 text-gray-400 group-hover:text-brand-primary" />
         </button>
 
         <button
@@ -73,8 +73,8 @@ const FunctionConfiguration = ({ functions, onChange }) => {
           className="card hover:shadow-xl transition-all duration-300 flex items-center justify-between p-4 group"
         >
           <div className="flex items-center space-x-3">
-            <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-xl group-hover:scale-110 transition-transform">
-              <Settings className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+            <div className="p-3 bg-brand-light dark:bg-brand-primary/20 rounded-xl group-hover:scale-110 transition-transform">
+              <Settings className="w-6 h-6 text-brand-secondary" />
             </div>
             <div className="text-left">
               <h3 className="font-semibold">Custom Function</h3>
@@ -83,7 +83,7 @@ const FunctionConfiguration = ({ functions, onChange }) => {
               </p>
             </div>
           </div>
-          <Plus className="w-5 h-5 text-gray-400 group-hover:text-primary-500" />
+          <Plus className="w-5 h-5 text-gray-400 group-hover:text-brand-primary" />
         </button>
       </div>
 
@@ -105,13 +105,13 @@ const FunctionConfiguration = ({ functions, onChange }) => {
                 <div className="flex items-center space-x-3">
                   <div className={`p-2 rounded-lg ${
                     func.type === 'cal_com'
-                      ? 'bg-blue-100 dark:bg-blue-900/30'
-                      : 'bg-purple-100 dark:bg-purple-900/30'
+                      ? 'bg-brand-light dark:bg-brand-primary/20'
+                      : 'bg-brand-light dark:bg-brand-primary/20'
                   }`}>
                     {func.type === 'cal_com' ? (
-                      <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                      <Calendar className="w-5 h-5 text-brand-primary" />
                     ) : (
-                      <Settings className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                      <Settings className="w-5 h-5 text-brand-secondary" />
                     )}
                   </div>
                   <div>

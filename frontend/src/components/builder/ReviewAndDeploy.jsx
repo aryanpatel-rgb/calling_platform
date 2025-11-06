@@ -15,9 +15,9 @@ const ReviewAndDeploy = ({ agentData, onSave, saving }) => {
         <div className="card bg-gradient-to-br from-primary-50 to-secondary-50 dark:from-primary-900/20 dark:to-secondary-900/20">
           <div className="flex items-center space-x-3">
             {agentData.type === 'voice_call' ? (
-              <Phone className="w-8 h-8 text-primary-600" />
+              <Phone className="w-8 h-8 text-brand-primary" />
             ) : (
-              <MessageSquare className="w-8 h-8 text-primary-600" />
+              <MessageSquare className="w-8 h-8 text-brand-primary" />
             )}
             <div>
               <h3 className="text-xl font-bold">{agentData.name}</h3>
@@ -33,7 +33,7 @@ const ReviewAndDeploy = ({ agentData, onSave, saving }) => {
           {/* Basic Configuration */}
           <div className="card">
             <div className="flex items-center space-x-2 mb-3">
-              <Settings className="w-5 h-5 text-primary-600" />
+              <Settings className="w-5 h-5 text-brand-primary" />
               <h4 className="font-semibold">Configuration</h4>
             </div>
             <div className="space-y-2 text-sm">
@@ -55,7 +55,7 @@ const ReviewAndDeploy = ({ agentData, onSave, saving }) => {
           {/* Functions */}
           <div className="card">
             <div className="flex items-center space-x-2 mb-3">
-              <Zap className="w-5 h-5 text-primary-600" />
+              <Zap className="w-5 h-5 text-brand-primary" />
               <h4 className="font-semibold">Functions</h4>
             </div>
             <div className="space-y-2 text-sm">
@@ -87,7 +87,7 @@ const ReviewAndDeploy = ({ agentData, onSave, saving }) => {
         {agentData.type === 'voice_call' && (
           <div className="card">
             <div className="flex items-center space-x-2 mb-3">
-              <Phone className="w-5 h-5 text-primary-600" />
+              <Phone className="w-5 h-5 text-brand-primary" />
               <h4 className="font-semibold">Voice Settings</h4>
             </div>
             <div className="grid grid-cols-2 gap-4 text-sm">
@@ -137,12 +137,12 @@ const ReviewAndDeploy = ({ agentData, onSave, saving }) => {
         {/* Success Message */}
         <div className="card bg-primary-50 dark:bg-primary-900/20 border-primary-200 dark:border-primary-800">
           <div className="flex items-start space-x-3">
-            <CheckCircle className="w-5 h-5 text-primary-600 dark:text-primary-400 flex-shrink-0 mt-0.5" />
+            <CheckCircle className="w-5 h-5 text-brand-primary dark:text-primary-400 flex-shrink-0 mt-0.5" />
             <div className="text-sm">
-              <p className="font-medium text-primary-900 dark:text-primary-100 mb-1">
+              <p className="font-medium text-brand-primary dark:text-primary-100 mb-1">
                 Ready to Deploy
               </p>
-              <p className="text-primary-700 dark:text-primary-300">
+              <p className="text-brand-primary dark:text-primary-300">
                 Your agent configuration looks good! Click "Create Agent" below to deploy it. 
                 You'll be able to test and refine it after creation.
               </p>

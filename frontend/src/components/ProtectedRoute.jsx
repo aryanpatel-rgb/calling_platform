@@ -24,7 +24,9 @@ const ProtectedRoute = ({ children }) => {
 
   // Redirect to login if not authenticated
   if (!isAuthenticated()) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    // Show login as a modal over the home page by passing backgroundLocation
+    const backgroundLocation = { ...location, pathname: '/' };
+    return <Navigate to="/login" state={{ from: location, backgroundLocation }} replace />;
   }
 
   return children;

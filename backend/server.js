@@ -10,6 +10,7 @@ import authRoutes from './routes/auth.js';
 import audioRoutes from './routes/audio.js';
 import sseRoutes from './routes/sse.js';
 import testRoutes from './routes/test.js';
+import phoneNumberRoutes from './routes/phoneNumbers.js';
 import { initializeDatabase, initializeSchema, checkConnection } from './db/database.js';
 
 // Security middleware imports
@@ -48,6 +49,7 @@ app.use('/api/stats', statsRoutes);
 app.use('/api/audio', audioRoutes);
 app.use('/api/sse', sseRoutes);
 app.use('/api/test', testRoutes);
+app.use('/api/phone-numbers', phoneNumberRoutes);
 app.use('/api', chatRoutes);
 
 // Health check

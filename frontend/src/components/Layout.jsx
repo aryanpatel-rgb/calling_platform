@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { Bot, Moon, Sun, Menu, X, User, LogOut } from 'lucide-react';
+import { Bot, Moon, Sun, Menu, X, User, LogOut, MessageSquare, Phone, Mail, Activity, CreditCard } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 const Layout = () => {
   const [darkMode, setDarkMode] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const location = useLocation();
   const { user, logout } = useAuth();
@@ -19,10 +20,30 @@ const Layout = () => {
     }
   }, [darkMode]);
 
+  // Sidebar configuration: single array, sorted per section by label
+  const sidebarItems = [
+    { section: 'Build', label: 'All Agent', path: '/dashboard', icon:Bot, activeMatch: '/dashboard' },
+    { section: 'Build', label: 'Email Campaign', href: '#', icon: Mail },
+    { section: 'Deploy', label: 'Phone Number', path: '/dashboard/phone-numbers', icon: Phone, activeMatch: '/dashboard/phone-numbers' },
+    { section: 'Deploy', label: 'Email Template', href: '#', icon: Mail },
+    { section: 'Monitor', label: 'Call History', href: '#', icon: Phone },
+    { section: 'Monitor', label: 'Chat History', href: '#', icon: MessageSquare },
+    { section: 'Monitor', label: 'Analytics', href: '#', icon: Activity },
+    { section: 'Billing', label: 'Billing', href: '#', icon: CreditCard },
+  ];
+
+  const sectionsOrder = ['Build', 'Deploy', 'Monitor', 'Billing'];
+  const groupedSidebar = sectionsOrder.map((title) => ({
+    title,
+    items: sidebarItems
+      .filter((i) => i.section === title)
+      .sort((a, b) => a.label.localeCompare(b.label)),
+  }));
+
   return (
     <div className="min-h-screen">
       {/* Header */}
-      <header className="sticky top-0 z-50 glass border-b border-gray-200/50 dark:border-gray-800/50">
+      <header className="sticky top-0 z-50 glass border-b border-gray-200/50 dark:border-gray-800/50" style={{ fontFamily: 'var(--brand-typo_font-family--secondary_regular)' }}>
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
@@ -74,7 +95,7 @@ const Layout = () => {
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
                   className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                 >
-                  <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                  <div className="w-8 h-8 bg-gradient-to-r from-brand-primary to-brand-sky rounded-full flex items-center justify-center">
                     <User className="w-4 h-4 text-white" />
                   </div>
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -195,10 +216,48 @@ const Layout = () => {
         </AnimatePresence>
       </header>
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Outlet />
-      </main>
+      {/* Main Content with Sidebar */}
+      <div className=" mx-auto mt-8 mb-8 min-h-[calc(100vh-8rem)]">
+        <div className="flex gap-6 items-stretch">
+          {/* Sidebar (desktop) */}
+          <aside className="hidden md:block w-64  shrink-0 md:sticky md:top-24 md:h-[calc(100vh-8rem)] text-base font-semibold" style={{ fontFamily: 'var(--brand-typo_font-family--secondary_regular)' }}>
+            <div className="bg-[#f8fff6] h-full overflow-y-auto rounded-2xl p-4 border border-y border-y-gray-300 dark:border-y-gray-800">
+              {groupedSidebar.map((section) => (
+                <div key={section.title} className="mb-6 last:mb-0">
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">{section.title}</h3>
+                  <nav className="space-y-1">
+                    {section.items.map((item) => {
+                      const Icon = item.icon;
+                      const isActive = !!item.path && (location.pathname.startsWith(item.activeMatch || item.path));
+                      const base = 'flex items-center gap-3 px-3 py-2 rounded-lg transition-colors';
+                      const active = isActive ? ' bg-brand-primary/20 text-brand-primary' : 'text-gray-700 dark:text-gray-300 hover:bg-brand-primary/10 hover:text-brand-primary';
+                      if (item.path) {
+                        return (
+                          <Link key={item.label} to={item.path} className={`${base} ${active}`} >
+                            <Icon className="w-4 h-4" />
+                            <span className=' text-gray-800 text-bold'>{item.label}</span>
+                          </Link>
+                        );
+                      }
+                      return (
+                        <a key={item.label} href="#" className={`${base}   dark:text-gray-400 hover:text-brand-primary hover:bg-brand-primary/10`}>
+                          <Icon className="w-4 h-4" />
+                          <span>{item.label}</span>
+                        </a>
+                      );
+                    })}
+                  </nav>
+                </div>
+              ))}
+            </div>
+          </aside>
+
+          {/* Main area */}
+          <main className="flex-1 min-h-[calc(100vh-8rem)] overflow-y-auto mr-8">
+            <Outlet />
+          </main>
+        </div>
+      </div>
 
       {/* Footer */}
       <footer className="border-t border-gray-200 dark:border-gray-800 mt-20">

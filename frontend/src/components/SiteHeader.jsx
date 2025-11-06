@@ -10,7 +10,7 @@ const SiteHeader = () => {
   const navigate = useNavigate();
 
 
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, logout } = useAuth();
 
   useEffect(() => {
     if (darkMode) {
@@ -25,7 +25,7 @@ const SiteHeader = () => {
     if (isAuthenticated()) {
       navigate('/dashboard');
     } else {
-      navigate('/register');
+      navigate('/register', { state: { backgroundLocation: location } });
     }
   };
 
@@ -33,8 +33,16 @@ const SiteHeader = () => {
     <>
       <a href="#demo" className="text-sm font-medium text-black">Demo</a>
       <a href="#features" className="text-sm font-medium text-black">Features</a>
-      <Link to="/login" className="text-sm font-medium text-black">Login</Link>
-      <Link onClick={handleRegisterClick} className="btn-primary">Get Started</Link>
+      {!isAuthenticated() ? (
+        <>
+          <Link to="/login" state={{ backgroundLocation: location }} className="text-sm font-medium text-black">Login</Link>
+        </>
+      ) : (
+        <>
+        <button onClick={logout} className="btn-secondary ml-2">Logout</button>
+        <Link onClick={handleRegisterClick} className="btn-primary">Get Started</Link>
+        </>
+      )}
     </>
   );
 

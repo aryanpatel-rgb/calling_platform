@@ -132,6 +132,23 @@ CREATE INDEX IF NOT EXISTS idx_call_history_agent_id ON call_history(agent_id);
 CREATE INDEX IF NOT EXISTS idx_call_history_call_sid ON call_history(call_sid);
 CREATE INDEX IF NOT EXISTS idx_call_history_status ON call_history(status);
 
+-- Phone Numbers table to store user-owned Twilio numbers and credentials
+CREATE TABLE IF NOT EXISTS phone_numbers (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    label VARCHAR(100),
+    phone_number VARCHAR(20) NOT NULL,
+    twilio_config JSONB, -- { accountSid, authToken, phoneNumber }
+    is_primary BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, phone_number)
+);
+
+-- Indexes for phone_numbers
+CREATE INDEX IF NOT EXISTS idx_phone_numbers_user_id ON phone_numbers(user_id);
+CREATE INDEX IF NOT EXISTS idx_phone_numbers_is_primary ON phone_numbers(user_id) WHERE is_primary = TRUE;
+
 -- Update updated_at trigger function
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
@@ -152,6 +169,9 @@ CREATE TRIGGER update_agent_functions_updated_at BEFORE UPDATE ON agent_function
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_call_history_updated_at BEFORE UPDATE ON call_history
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_phone_numbers_updated_at BEFORE UPDATE ON phone_numbers
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Create default user for development (optional)
