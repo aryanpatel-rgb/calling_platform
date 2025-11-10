@@ -1,11 +1,13 @@
 import express from 'express';
 import twilio from 'twilio';
-import * as agentRepo from '../db/repositories/agentRepository.js';
-import { initiateCall, handleVoiceWebhook, endCall, processUserSpeech } from '../services/twilioService.js';
-import { validateTwilioCall, validateAgentId } from '../middleware/validation.js';
-import { voiceLimiter } from '../middleware/rateLimiting.js';
-import * as callHistoryRepo from '../db/repositories/callHistoryRepository.js';
-import { broadcastCallUpdate, broadcastStatsUpdate } from './sse.js';
+import dotenv from 'dotenv';
+import { getAgentById } from '../db/repositories/agentRepository.js';
+import { setCallMapping, updateStatus, getAudio } from '../utils/callStore.js';
+import { generateSpeech } from '../services/elevenLabsService.js';
+import { storeAudio } from '../utils/callStore.js';
+
+dotenv.config();
+
 
 const router = express.Router();
 
@@ -53,176 +55,224 @@ router.post('/validate', async (req, res) => {
   }
 });
 
-// Initiate test call
-router.post('/agents/:id/call', voiceLimiter, validateTwilioCall, async (req, res) => {
+// Provide TwiML to start Twilio Media Stream to our WebSocket voice gateway
+router.post('/voice/stream', async (req, res) => {
   try {
-    const agent = await agentRepo.getAgentById(req.params.id);
-    if (!agent) {
-      return res.status(404).json({ error: true, message: 'Agent not found' });
-    }
+    const { VOICE_GATEWAY_WS_URL, SERVER_URL } = process.env;
+    // Prefer explicit gateway URL, else derive from SERVER_URL
+    const wsUrl = VOICE_GATEWAY_WS_URL || (SERVER_URL ? SERVER_URL.replace('http', 'ws') + '/voice-stream' : 'ws://localhost:3000/voice-stream');
 
-    if (agent.type !== 'voice_call') {
-      return res.status(400).json({ error: true, message: 'Agent is not a voice call agent' });
-    }
+    const twiml = new twilio.twiml.VoiceResponse();
+    const connect = twiml.connect();
+    connect.stream({ url: `${wsUrl}?source=twilio` });
 
-    const { phoneNumber } = req.body;
-
-    if (!agent.twilioConfig || !agent.twilioConfig.accountSid) {
-      return res.status(400).json({ error: true, message: 'Twilio not configured for this agent' });
-    }
-
-    const callSid = await initiateCall(agent, phoneNumber);
-
-    res.json({
-      success: true,
-      callSid,
-      message: 'Call initiated successfully'
-    });
-  } catch (error) {
-    console.error('Call initiation error:', error);
-    res.status(500).json({ error: true, message: error.message });
-  }
-});
-
-// End call
-router.post('/agents/:id/call/end', async (req, res) => {
-  try {
-    const agent = await agentRepo.getAgentById(req.params.id);
-    if (!agent) {
-      return res.status(404).json({ error: true, message: 'Agent not found' });
-    }
-
-    await endCall(agent);
-
-    res.json({
-      success: true,
-      message: 'Call ended successfully'
-    });
-  } catch (error) {
-    console.error('End call error:', error);
-    res.status(500).json({ error: true, message: error.message });
-  }
-});
-
-// Twilio voice webhook
-router.post('/voice/webhook', async (req, res) => {
-  try {
-    const twiml = await handleVoiceWebhook(req.body, req.query);
-    res.type('text/xml');
-    res.send(twiml);
-  } catch (error) {
-    console.error('Voice webhook error:', error);
-    res.status(500).send('Error processing call');
-  }
-});
-
-// Handle user speech input and generate agent response
-router.post('/voice/process', async (req, res) => {
-  try {
-    const twiml = await processUserSpeech(req.body, req.query);
-    res.type('text/xml');
-    res.send(twiml);
-  } catch (error) {
-    console.error('Voice process error:', error);
-    res.status(500).send('Error processing speech');
-  }
-});
-
-// Handle partial speech recognition results for real-time feedback
-router.post('/voice/partial', async (req, res) => {
-  try {
-    const { agentId } = req.query;
-    const { UnstableSpeechResult, Confidence } = req.body;
-    
-    // Log partial results for debugging (optional)
-    if (UnstableSpeechResult && UnstableSpeechResult.trim() !== '') {
-      console.log(`Partial speech for agent ${agentId}: "${UnstableSpeechResult}" (confidence: ${Confidence})`);
-    }
-    
-    // Return empty TwiML to continue listening
-    const VoiceResponse = twilio.twiml.VoiceResponse;
-    const twiml = new VoiceResponse();
     res.type('text/xml');
     res.send(twiml.toString());
   } catch (error) {
-    console.error('Partial speech error:', error);
-    res.status(200).send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
-  }
-});
-
-// Handle call status updates from Twilio
-router.post('/voice/status', async (req, res) => {
-  try {
-    const { CallSid, CallStatus, AnsweredBy, Duration } = req.body;
-    
-    console.log(`Call status update: ${CallSid} - ${CallStatus}`);
-    
-    // Update call history in database
-    const updateData = { status: CallStatus.toLowerCase() };
-    
-    if (CallStatus === 'answered') {
-      updateData.answered_at = new Date();
-    } else if (['completed', 'failed', 'busy', 'no-answer'].includes(CallStatus.toLowerCase())) {
-      updateData.ended_at = new Date();
-      if (Duration) {
-        updateData.duration = parseInt(Duration);
-      }
-    }
-    
-    const updatedCall = await callHistoryRepo.updateCallBySid(CallSid, updateData);
-    
-    if (updatedCall) {
-      // Broadcast real-time update to connected clients
-      broadcastCallUpdate(updatedCall.agent_id, {
-        id: updatedCall.id,
-        call_sid: CallSid,
-        status: CallStatus.toLowerCase(),
-        duration: updatedCall.duration,
-        answered_at: updatedCall.answered_at,
-        ended_at: updatedCall.ended_at
-      });
-      
-      // If call ended, also broadcast updated stats
-      if (['completed', 'failed', 'busy', 'no-answer'].includes(CallStatus.toLowerCase())) {
-        const stats = await callHistoryRepo.getCallStatsByAgent(updatedCall.agent_id);
-        broadcastStatsUpdate(updatedCall.agent_id, stats);
-      }
-    }
-    
-    res.status(200).send('OK');
-  } catch (error) {
-    console.error('Call status update error:', error);
     res.status(500).json({ error: true, message: error.message });
   }
 });
 
-// Handle recording status updates from Twilio
-router.post('/voice/recording', async (req, res) => {
+// Initiate an outbound call to a test phone number using agent's Twilio credentials
+router.post('/call', async (req, res) => {
   try {
-    const { CallSid, RecordingUrl, RecordingStatus } = req.body;
-    
-    console.log(`Recording status update: ${CallSid} - ${RecordingStatus}`);
-    
-    if (RecordingStatus === 'completed' && RecordingUrl) {
-      const updatedCall = await callHistoryRepo.updateCallBySid(CallSid, {
-        recording_url: RecordingUrl
-      });
-      
-      if (updatedCall) {
-        // Broadcast recording update to connected clients
-        broadcastCallUpdate(updatedCall.agent_id, {
-          id: updatedCall.id,
-          call_sid: CallSid,
-          recording_url: RecordingUrl,
-          has_recording: true
-        });
+    const { agentId, phoneNumber } = req.body || {};
+
+    if (!agentId || !phoneNumber) {
+      return res.status(400).json({ error: true, message: 'agentId and phoneNumber are required' });
+    }
+
+    // Validate E.164 phone format
+    if (!phoneNumber.match(/^\+[1-9]\d{1,14}$/)) {
+      return res.status(400).json({ error: true, message: 'Invalid phone number format. Use E.164 format (+1234567890)' });
+    }
+
+    // Load agent and Twilio config
+    const agent = await getAgentById(agentId);
+    if (!agent) {
+      return res.status(404).json({ error: true, message: 'Agent not found' });
+    }
+
+    const cfg = agent.twilioConfig || agent.twilio_config;
+    if (!cfg || !cfg.accountSid || !cfg.authToken || !cfg.phoneNumber) {
+      return res.status(400).json({ error: true, message: 'Agent Twilio configuration is incomplete' });
+    }
+
+    // Build TwiML that connects the call to our WebSocket voice gateway
+    const { VOICE_GATEWAY_WS_URL, SERVER_URL } = process.env;
+    const wsUrl = VOICE_GATEWAY_WS_URL || (SERVER_URL ? SERVER_URL.replace('http', 'ws') + '/voice-stream' : 'ws://localhost:3000/voice-stream');
+    const twimlResponse = new twilio.twiml.VoiceResponse();
+
+    // Optional greeting from agent config before starting the stream
+    let greetingText = '';
+    try {
+      const vs = agent.voiceSettings || agent.voice_settings;
+      const configuredGreeting = vs?.greeting;
+      if (configuredGreeting && typeof configuredGreeting === 'string') {
+        greetingText = configuredGreeting.trim();
+      } else if (agent.system_prompt && typeof agent.system_prompt === 'string') {
+        // Use the first sentence from system prompt to avoid overly long TTS
+        const firstSentence = agent.system_prompt.split(/\.|\n/)[0] || '';
+        greetingText = firstSentence.trim().slice(0, 240);
+      }
+    } catch {}
+
+    if (greetingText) {
+      try {
+        const { SERVER_URL } = process.env;
+        if (SERVER_URL) {
+          const vs = agent.voiceSettings || agent.voice_settings || {};
+          const audioBase64 = await generateSpeech(greetingText, {
+            voiceId: vs.voiceId || 'default',
+            stability: vs.stability,
+            similarityBoost: vs.similarityBoost,
+            speed: vs.speed
+          });
+          if (audioBase64 && audioBase64.length > 0) {
+            const audioId = storeAudio(audioBase64, 'audio/mpeg');
+            const audioUrl = `${SERVER_URL}/api/twilio/audio/${audioId}`;
+            twimlResponse.play(audioUrl);
+          } else {
+            twimlResponse.say({ voice: 'alice', language: 'en-US' }, greetingText);
+          }
+        } else {
+          // Fallback when SERVER_URL is not configured
+          twimlResponse.say({ voice: 'alice', language: 'en-US' }, greetingText);
+        }
+      } catch (err) {
+        console.warn('[Twilio] Greeting TTS failed, falling back to <Say>:', err?.message || err);
+        twimlResponse.say({ voice: 'alice', language: 'en-US' }, greetingText);
       }
     }
-    
-    res.status(200).send('OK');
+
+    const connect = twimlResponse.connect();
+    // Attach agentId so voice gateway can personalize and push replies mid-call
+    connect.stream({ url: `${wsUrl}?source=twilio&agentId=${encodeURIComponent(agentId)}` });
+    const twiml = twimlResponse.toString();
+    console.log('[Twilio] Outbound TwiML length:', twiml.length);
+    // Optional: uncomment to print TwiML for debugging
+    // console.log('[Twilio] Outbound TwiML:', twiml);
+
+    // Create the call
+    const client = twilio(cfg.accountSid, cfg.authToken);
+    console.log('[Twilio] Outbound call request:', { to: phoneNumber, from: cfg.phoneNumber, wsUrl });
+
+    const statusCallbackUrl = process.env.SERVER_URL ? `${process.env.SERVER_URL}/api/twilio/status` : null;
+    if (!statusCallbackUrl) {
+      console.warn('[Twilio] SERVER_URL not set — status callbacks will be disabled. Set SERVER_URL to your public https domain.');
+    }
+
+    const call = await client.calls.create({
+      to: phoneNumber,
+      from: cfg.phoneNumber,
+      twiml,
+      ...(statusCallbackUrl ? {
+        statusCallback: statusCallbackUrl,
+        statusCallbackEvent: ['initiated', 'ringing', 'answered', 'completed'],
+        statusCallbackMethod: 'POST'
+      } : {})
+    });
+
+    console.log('[Twilio] Call created:', { sid: call.sid, status: call.status });
+    // Map callSid to agentId so the voice gateway can retrieve context mid-call
+    try { setCallMapping(call.sid, agentId); } catch {}
+
+    return res.json({
+      success: true,
+      sid: call.sid,
+      status: call.status,
+      to: call.to,
+      from: call.from
+    });
   } catch (error) {
-    console.error('Recording status update error:', error);
-    res.status(500).json({ error: true, message: error.message });
+    console.error('Twilio outbound call error:', error?.message || error);
+    return res.status(500).json({ error: true, message: error.message || 'Failed to initiate call' });
+  }
+});
+
+// Fetch call status by SID (requires agentId to look up credentials)
+router.get('/call/:sid', async (req, res) => {
+  try {
+    const { sid } = req.params;
+    const { agentId } = req.query;
+
+    if (!sid || !agentId) {
+      return res.status(400).json({ error: true, message: 'sid and agentId are required' });
+    }
+
+    const agent = await getAgentById(agentId);
+    if (!agent) {
+      return res.status(404).json({ error: true, message: 'Agent not found' });
+    }
+
+    const cfg = agent.twilioConfig || agent.twilio_config;
+    if (!cfg || !cfg.accountSid || !cfg.authToken) {
+      return res.status(400).json({ error: true, message: 'Agent Twilio configuration is incomplete' });
+    }
+
+    const client = twilio(cfg.accountSid, cfg.authToken);
+    const call = await client.calls(sid).fetch();
+
+    return res.json({
+      success: true,
+      sid: call.sid,
+      status: call.status,
+      to: call.to,
+      from: call.from,
+      duration: call.duration,
+      direction: call.direction,
+      startTime: call.startTime,
+      endTime: call.endTime
+    });
+  } catch (error) {
+    console.error('Twilio call status error:', error?.message || error);
+    return res.status(500).json({ error: true, message: error.message || 'Failed to fetch call status' });
+  }
+});
+
+// Twilio status webhook: logs server-side call lifecycle events
+router.post('/status', async (req, res) => {
+  try {
+    const {
+      CallSid,
+      CallStatus,
+      CallDuration,
+      From,
+      To,
+      Timestamp,
+      SequenceNumber,
+      EventType
+    } = req.body || {};
+
+    console.log('[Twilio] Status callback:', {
+      CallSid, EventType, CallStatus, CallDuration, From, To, Timestamp, SequenceNumber
+    });
+
+    // Update call status in in-memory store for debugging/lookup
+    try { if (CallSid) updateStatus(CallSid, CallStatus || EventType); } catch {}
+
+    res.type('text/plain').send('ok');
+  } catch (err) {
+    console.error('[Twilio] Status callback error:', err?.message || err);
+    res.status(500).send('error');
+  }
+});
+
+// Serve generated TTS audio by id for TwiML <Play>
+router.get('/audio/:audioId', async (req, res) => {
+  try {
+    const { audioId } = req.params;
+    const blob = getAudio(audioId);
+    if (!blob) {
+      return res.status(404).json({ error: true, message: 'Audio not found' });
+    }
+    const buf = Buffer.from(blob.base64, 'base64');
+    res.set('Content-Type', blob.contentType || 'audio/mpeg');
+    res.set('Cache-Control', 'no-store');
+    return res.send(buf);
+  } catch (error) {
+    console.error('Twilio audio serve error:', error?.message || error);
+    return res.status(500).json({ error: true, message: error.message || 'Failed to serve audio' });
   }
 });
 

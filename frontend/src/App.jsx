@@ -35,10 +35,10 @@ function App() {
           }>
             <Route index element={<Dashboard />} />
             <Route path="agent/new" element={<AgentBuilder />} />
-            <Route path="agent/:id" element={<AgentDetail />} />
-            <Route path="agent/:id/edit" element={<AgentBuilder />} />
-            <Route path="agent/:id/test" element={<TestAgent />} />
-            <Route path="phone-numbers" element={<PhoneNumbers />} />
+          <Route path="agent/:id" element={<AgentDetail />} />
+          <Route path="agent/:id/test" element={<TestAgent />} />
+          <Route path="agent/:id/edit" element={<AgentBuilder />} />
+          <Route path="phone-numbers" element={<PhoneNumbers />} />
           </Route>
 
           {/* Catch all route */}

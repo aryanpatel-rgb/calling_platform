@@ -71,13 +71,7 @@ const AgentCard = ({ agent }) => {
                 <Settings className="w-4 h-4" />
                 <span>Settings</span>
               </Link>
-              <Link
-                to={`/dashboard/agent/${agent.id}/test`}
-                className="flex items-center space-x-2 px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700"
-              >
-                <Play className="w-4 h-4" />
-                <span>Test Agent</span>
-              </Link>
+              
               <button
                 className="w-full flex items-center space-x-2 px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-b-lg text-red-600"
               >
@@ -112,12 +106,14 @@ const AgentCard = ({ agent }) => {
 
       {/* Actions */}
       <div className="flex space-x-2">
-        <Link
-          to={`/dashboard/agent/${agent.id}/test`}
-          className="flex-1 btn-primary text-center text-sm"
-        >
-          Test Agent
-        </Link>
+        {agent.type !== 'voice_call' && (
+          <Link
+            to={`/dashboard/agent/${agent.id}/test`}
+            className="flex-1 btn-primary text-center text-sm"
+          >
+            Test Agent
+          </Link>
+        )}
         <Link
           to={`/dashboard/agent/${agent.id}`}
           className="flex-1 btn-secondary text-center text-sm"

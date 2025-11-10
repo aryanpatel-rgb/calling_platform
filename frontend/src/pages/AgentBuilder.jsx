@@ -199,7 +199,7 @@ const AgentBuilder = () => {
         response = await axios.post('http://localhost:3000/api/agents', agentData);
         toast.success('Agent created successfully!');
       }
-      navigate(`/agent/${response.data.id}`);
+      navigate(`/dashboard/agent/${response.data.id}`);
     } catch (error) {
       console.error('Error saving agent:', error);
       toast.error(error.response?.data?.message || `Failed to ${isEditing ? 'update' : 'create'} agent`);

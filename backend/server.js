@@ -7,11 +7,9 @@ import calComRoutes from './routes/calcom.js';
 import chatRoutes from './routes/chat.js';
 import statsRoutes from './routes/stats.js';
 import authRoutes from './routes/auth.js';
-import audioRoutes from './routes/audio.js';
-import sseRoutes from './routes/sse.js';
-import testRoutes from './routes/test.js';
 import phoneNumberRoutes from './routes/phoneNumbers.js';
 import { initializeDatabase, initializeSchema, checkConnection } from './db/database.js';
+import { setupVoiceGateway } from './services/voiceGateway.js';
 
 // Security middleware imports
 import { securityHeaders, corsMiddleware, securityLogger, requestSizeLimiter } from './middleware/security.js';
@@ -46,9 +44,6 @@ app.use('/api/agents', agentRoutes);
 app.use('/api/twilio', twilioRoutes);
 app.use('/api/calcom', calComRoutes);
 app.use('/api/stats', statsRoutes);
-app.use('/api/audio', audioRoutes);
-app.use('/api/sse', sseRoutes);
-app.use('/api/test', testRoutes);
 app.use('/api/phone-numbers', phoneNumberRoutes);
 app.use('/api', chatRoutes);
 
@@ -112,13 +107,16 @@ async function startServer() {
     console.log('⚠️  Set DATABASE_URL to enable persistent storage\n');
   }
   
-  app.listen(PORT, () => {
+  const httpServer = app.listen(PORT, () => {
     console.log('════════════════════════════════════════');
     console.log(`✅ Server running on port ${PORT}`);
     console.log(`📡 Health check: http://localhost:${PORT}/health`);
     console.log(`🌐 API Base: http://localhost:${PORT}/api`);
     console.log('════════════════════════════════════════\n');
   });
+
+  // Attach WebSocket voice gateway
+  setupVoiceGateway(httpServer);
 }
 
 startServer().catch(error => {

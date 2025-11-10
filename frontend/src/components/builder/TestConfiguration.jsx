@@ -1,16 +1,55 @@
 import { Phone, AlertCircle, CheckCircle } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
 const TestConfiguration = ({ twilioConfig, onChange }) => {
   const [validating, setValidating] = useState(false);
   const [validationStatus, setValidationStatus] = useState(null);
+  const [numbersLoading, setNumbersLoading] = useState(true);
+  const [existingNumbers, setExistingNumbers] = useState([]);
+  const [useExisting, setUseExisting] = useState(false);
+  const [selectedNumberId, setSelectedNumberId] = useState('');
 
   const updateConfig = (key, value) => {
     onChange({
       ...twilioConfig,
       [key]: value
+    });
+  };
+
+  // Fetch user's saved phone numbers for dropdown
+  useEffect(() => {
+    const fetchNumbers = async () => {
+      try {
+        const res = await axios.get('http://localhost:3000/api/phone-numbers');
+        setExistingNumbers(res.data || []);
+      } catch (err) {
+        console.error('Fetch phone numbers error:', err);
+      } finally {
+        setNumbersLoading(false);
+      }
+    };
+    fetchNumbers();
+  }, []);
+
+  const handleSelectExisting = (id) => {
+    setSelectedNumberId(id);
+    const item = existingNumbers.find((n) => n.id === id);
+    if (!item) return;
+    let tc = item.twilio_config;
+    if (typeof tc === 'string') {
+      try { tc = JSON.parse(tc); } catch { tc = null; }
+    }
+    if (!tc) {
+      toast.error('Selected number has no Twilio config');
+      return;
+    }
+    onChange({
+      ...twilioConfig,
+      accountSid: tc.accountSid || '',
+      authToken: tc.authToken || '',
+      phoneNumber: tc.phoneNumber || ''
     });
   };
 
@@ -56,6 +95,48 @@ const TestConfiguration = ({ twilioConfig, onChange }) => {
       </div>
 
       <div className="space-y-6">
+        {/* Existing Numbers Selection */}
+        <div className="card">
+          <div className="flex items-start justify-between">
+            <div>
+              <label className="block text-sm font-medium mb-2">Use existing phone number</label>
+              {numbersLoading ? (
+                <p className="text-sm text-gray-500">Loading your saved numbers...</p>
+              ) : existingNumbers.length === 0 ? (
+                <p className="text-sm text-gray-500">No saved numbers. Add one in <a href="/phone-numbers" className="underline">Phone Numbers</a>.</p>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      id="useExisting"
+                      type="checkbox"
+                      checked={useExisting}
+                      onChange={(e) => setUseExisting(e.target.checked)}
+                    />
+                    <label htmlFor="useExisting" className="text-sm">Select from your saved numbers</label>
+                  </div>
+                  {useExisting && (
+                    <select
+                      className="input-field"
+                      value={selectedNumberId}
+                      onChange={(e) => handleSelectExisting(e.target.value)}
+                    >
+                      <option value="">Select a number...</option>
+                      {existingNumbers.map((n) => {
+                        const label = n.label ? `${n.label} – ${n.phone_number}` : n.phone_number;
+                        return (
+                          <option key={n.id} value={n.id}>{label}</option>
+                        );
+                      })}
+                    </select>
+                  )}
+                </div>
+              )}
+            </div>
+            <a href="/phone-numbers" className="text-sm underline text-gray-600">Manage</a>
+          </div>
+        </div>
+
         {/* Info Alert */}
         <div className="card bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800">
           <div className="flex items-start space-x-3">
@@ -90,6 +171,7 @@ const TestConfiguration = ({ twilioConfig, onChange }) => {
             onChange={(e) => updateConfig('accountSid', e.target.value)}
             placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
             className="input-field font-mono text-sm"
+            disabled={useExisting}
           />
         </div>
 
@@ -104,6 +186,7 @@ const TestConfiguration = ({ twilioConfig, onChange }) => {
             onChange={(e) => updateConfig('authToken', e.target.value)}
             placeholder="Your auth token"
             className="input-field font-mono text-sm"
+            disabled={useExisting}
           />
         </div>
 
@@ -118,6 +201,7 @@ const TestConfiguration = ({ twilioConfig, onChange }) => {
             onChange={(e) => updateConfig('phoneNumber', e.target.value)}
             placeholder="+1234567890"
             className="input-field"
+            disabled={useExisting}
           />
           <p className="text-xs text-gray-500 mt-1">
             The phone number from which test calls will be made (format: +1234567890)

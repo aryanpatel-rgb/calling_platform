@@ -2,10 +2,9 @@ import express from 'express';
 import { validateAgent } from '../utils/validation.js';
 import * as agentRepo from '../db/repositories/agentRepository.js';
 import { authenticateToken } from '../utils/auth.js';
-import { generateSpeech } from '../services/elevenLabsService.js';
 import { validateAgent as validateAgentMiddleware, validateAgentId } from '../middleware/validation.js';
 import { agentLimiter } from '../middleware/rateLimiting.js';
-import * as callHistoryRepo from '../db/repositories/callHistoryRepository.js';
+import { generateSpeech } from '../services/elevenLabsService.js';
 
 const router = express.Router();
 
@@ -103,32 +102,35 @@ router.delete('/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// Test voice sample
+// Test voice sample (for voice agent configuration)
 router.post('/voice/test', authenticateToken, async (req, res) => {
   try {
     const { voiceId, stability, similarityBoost, speed, text } = req.body;
-    
-    // Default test text if none provided
+
     const testText = text || "Hello! This is a test of your selected voice settings. How does this sound?";
-    
-    // Generate speech using ElevenLabs
-    const audioUrl = await generateSpeech(testText, {
+
+    // Generate base64 audio (audio/mpeg) from ElevenLabs
+    const audioBase64 = await generateSpeech(testText, {
       voiceId: voiceId || 'default',
-      stability: stability || 0.5,
-      similarityBoost: similarityBoost || 0.75,
-      speed: speed || 1.0
+      stability: typeof stability === 'number' ? stability : 0.5,
+      similarityBoost: typeof similarityBoost === 'number' ? similarityBoost : 0.75,
+      speed: typeof speed === 'number' ? speed : 1.0
     });
 
-    if (!audioUrl) {
+    if (!audioBase64) {
       return res.status(503).json({ 
         error: true, 
         message: 'Voice generation service is not available. Please check ElevenLabs configuration.' 
       });
     }
 
+    // Build a proper data URL that the browser can play directly
+    const audioUrl = `data:audio/mpeg;base64,${audioBase64}`;
+
     res.json({ 
       success: true, 
-      audioUrl: audioUrl,
+      audioUrl,
+      audioBase64, // included for clients that prefer Blob URLs
       message: 'Voice sample generated successfully'
     });
   } catch (error) {
@@ -140,66 +142,7 @@ router.post('/voice/test', authenticateToken, async (req, res) => {
   }
 });
 
-// Get call history for an agent
-router.get('/:id/calls', authenticateToken, async (req, res) => {
-  try {
-    const agent = await agentRepo.getAgentByIdAndUser(req.params.id, req.user.id);
-    if (!agent) {
-      return res.status(404).json({ 
-        error: true, 
-        message: 'Agent not found or you do not have permission to access it.'
-      });
-    }
 
-    const limit = parseInt(req.query.limit) || 50;
-    const offset = parseInt(req.query.offset) || 0;
-
-    const calls = await callHistoryRepo.getCallHistoryByAgent(req.params.id, limit, offset);
-    res.json(calls);
-  } catch (error) {
-    console.error('Get call history error:', error);
-    res.status(500).json({ error: true, message: error.message });
-  }
-});
-
-// Get call statistics for an agent
-router.get('/:id/calls/stats', authenticateToken, async (req, res) => {
-  try {
-    const agent = await agentRepo.getAgentByIdAndUser(req.params.id, req.user.id);
-    if (!agent) {
-      return res.status(404).json({ 
-        error: true, 
-        message: 'Agent not found or you do not have permission to access it.'
-      });
-    }
-
-    const stats = await callHistoryRepo.getCallStatsByAgent(req.params.id);
-    res.json(stats);
-  } catch (error) {
-    console.error('Get call stats error:', error);
-    res.status(500).json({ error: true, message: error.message });
-  }
-});
-
-// Get recent call activity for an agent
-router.get('/:id/calls/activity', authenticateToken, async (req, res) => {
-  try {
-    const agent = await agentRepo.getAgentByIdAndUser(req.params.id, req.user.id);
-    if (!agent) {
-      return res.status(404).json({ 
-        error: true, 
-        message: 'Agent not found or you do not have permission to access it.'
-      });
-    }
-
-    const days = parseInt(req.query.days) || 7;
-    const activity = await callHistoryRepo.getRecentCallActivity(req.params.id, days);
-    res.json(activity);
-  } catch (error) {
-    console.error('Get call activity error:', error);
-    res.status(500).json({ error: true, message: error.message });
-  }
-});
 
 export default router;
 

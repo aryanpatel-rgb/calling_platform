@@ -24,9 +24,8 @@ const VoiceConfiguration = ({ voiceSettings, onChange }) => {
 
   const handlePlaySample = async () => {
     setPlaying(true);
-    
+
     try {
-      // Call the backend API to generate voice sample
       const response = await axios.post('http://localhost:3000/api/agents/voice/test', {
         voiceId: voiceSettings.voiceId,
         stability: voiceSettings.stability,
@@ -35,10 +34,9 @@ const VoiceConfiguration = ({ voiceSettings, onChange }) => {
         text: voiceSettings.greeting || "Hello! This is a test of your selected voice settings. How does this sound?"
       });
 
-      if (response.data.success && response.data.audioUrl) {
-        // Create audio element and play the generated audio
+      if (response.data?.success && response.data?.audioUrl) {
         const audio = new Audio(response.data.audioUrl);
-        
+
         audio.onloadeddata = () => {
           audio.play().catch(error => {
             console.error('Audio play error:', error);
@@ -47,31 +45,26 @@ const VoiceConfiguration = ({ voiceSettings, onChange }) => {
           });
         };
 
-        audio.onended = () => {
-          setPlaying(false);
-        };
-
+        audio.onended = () => setPlaying(false);
         audio.onerror = () => {
           console.error('Audio loading error');
           toast.error('Failed to load audio sample');
           setPlaying(false);
         };
-
       } else {
         toast.error('Failed to generate voice sample');
         setPlaying(false);
       }
     } catch (error) {
       console.error('Voice test error:', error);
-      
-      if (error.response?.status === 503) {
-        toast.error('Voice generation service is not available. Please check ElevenLabs configuration.');
-      } else if (error.response?.status === 401) {
+      const status = error.response?.status;
+      if (status === 503) {
+        toast.error('Voice generation service unavailable. Check ElevenLabs configuration.');
+      } else if (status === 401) {
         toast.error('Authentication required. Please log in again.');
       } else {
         toast.error(error.response?.data?.message || 'Failed to test voice');
       }
-      
       setPlaying(false);
     }
   };
@@ -143,7 +136,7 @@ const VoiceConfiguration = ({ voiceSettings, onChange }) => {
             </button>
           </div>
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            Test how your selected voice sounds with the current settings
+            Preview your selected voice with current settings.
           </p>
         </div>
 

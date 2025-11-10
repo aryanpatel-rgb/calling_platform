@@ -4,7 +4,6 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, Play, Settings, Trash2, Calendar, Phone, MessageSquare, Edit, Power, PowerOff } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
-import CallHistory from '../components/CallHistory';
 
 const AgentDetail = () => {
   const { id } = useParams();
@@ -38,7 +37,7 @@ const AgentDetail = () => {
     try {
       await axios.delete(`http://localhost:3000/api/agents/${id}`);
       toast.success('Agent deleted successfully');
-      navigate('/');
+      navigate('/dashboard');
     } catch (error) {
       console.error('Error deleting agent:', error);
       toast.error('Failed to delete agent');
@@ -89,7 +88,7 @@ const AgentDetail = () => {
         <p className="text-gray-600 dark:text-gray-400 mb-6">
           The agent you're looking for doesn't exist
         </p>
-        <Link to="/" className="btn-primary">
+        <Link to="/dashboard" className="btn-primary">
           Back to Dashboard
         </Link>
       </div>
@@ -101,7 +100,7 @@ const AgentDetail = () => {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <Link
-          to="/"
+          to="/dashboard"
           className="flex items-center space-x-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
         >
           <ArrowLeft className="w-5 h-5" />
@@ -109,11 +108,11 @@ const AgentDetail = () => {
         </Link>
 
         <div className="flex space-x-3">
-          <Link to={`/agent/${id}/test`} className="btn-primary flex items-center space-x-2">
+          <Link to={`/dashboard/agent/${id}/test`} className="btn-primary flex items-center space-x-2">
             <Play className="w-4 h-4" />
             <span>Test Agent</span>
           </Link>
-          <Link to={`/agent/${id}/edit`} className="btn-secondary flex items-center space-x-2">
+          <Link to={`/dashboard/agent/${id}/edit`} className="btn-secondary flex items-center space-x-2">
             <Edit className="w-4 h-4" />
             <span>Edit</span>
           </Link>
@@ -326,10 +325,7 @@ const AgentDetail = () => {
         </motion.div>
       )}
 
-      {/* Call History (for voice call agents) */}
-      {agent.type === 'voice_call' && (
-        <CallHistory agentId={agent.id} />
-      )}
+
     </div>
   );
 };
