@@ -302,7 +302,7 @@ const TestAgent = () => {
   // If voice agent, render voice test UI
   if (agent.type === 'voice_call') {
     return (
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <Link to={`/dashboard/agent/${id}`} className="flex items-center space-x-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100">
@@ -319,7 +319,7 @@ const TestAgent = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           <div className="card">
             <h3 className="text-lg font-semibold mb-2">Agent Prompt</h3>
-            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 max-h-56 overflow-y-auto">
+            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 max-h-96 overflow-y-auto">
               <p className="text-sm font-mono whitespace-pre-wrap">{agent.system_prompt || 'No prompt configured.'}</p>
             </div>
           </div>
@@ -351,19 +351,6 @@ const TestAgent = () => {
 
         {/* Voice gateway controls and live events */}
         <div className="card">
-          <div className="mb-4 flex items-center gap-2">
-            {!wsConnected ? (
-              <button onClick={connectWs} className="btn-primary">Connect Gateway</button>
-            ) : (
-              <button onClick={disconnectWs} className="btn-secondary">Disconnect</button>
-            )}
-            {wsConnected && !micActive ? (
-              <button onClick={startMic} className="btn-primary flex items-center gap-2"><Mic className="w-4 h-4" /> Start Mic</button>
-            ) : wsConnected && micActive ? (
-              <button onClick={stopMic} className="btn-secondary flex items-center gap-2"><Square className="w-4 h-4" /> Stop Mic</button>
-            ) : null}
-          </div>
-
           {/* Transcript and audio events */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="rounded-lg border p-3">
@@ -394,7 +381,7 @@ const TestAgent = () => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <Link to={`/dashboard/agent/${id}`} className="flex items-center space-x-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100">
