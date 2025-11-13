@@ -178,4 +178,3 @@ CREATE TRIGGER update_phone_numbers_updated_at BEFORE UPDATE ON phone_numbers
 INSERT INTO users (id, email, name) 
 VALUES ('00000000-0000-0000-0000-000000000001', 'demo@aiagent.com', 'Demo User')
 ON CONFLICT (email) DO NOTHING;
-

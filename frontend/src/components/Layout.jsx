@@ -23,8 +23,8 @@ const Layout = () => {
   // Sidebar configuration: single array, sorted per section by label
   const sidebarItems = [
     { section: 'Build', label: 'All Agent', path: '/dashboard', icon:Bot, activeMatch: '/dashboard' },
-    { section: 'Build', label: 'Email Campaign', href: '#', icon: Mail },
-    { section: 'Deploy', label: 'Phone Number', path: '/dashboard/phone-numbers', icon: Phone, activeMatch: '/dashboard/phone-numbers' },
+    { section: 'Deploy', label: 'Email Campaign', href: '#', icon: Mail },
+    { section: 'Build', label: 'Phone Number', path: '/dashboard/phone-numbers', icon: Phone, activeMatch: '/dashboard/phone-numbers' },
     { section: 'Deploy', label: 'Email Template', href: '#', icon: Mail },
     { section: 'Monitor', label: 'Call History', href: '#', icon: Phone },
     { section: 'Monitor', label: 'Chat History', href: '#', icon: MessageSquare },
@@ -259,27 +259,7 @@ const Layout = () => {
         </div>
       </div>
 
-      {/* Footer */}
-      <footer className="border-t border-gray-200 dark:border-gray-800 mt-20">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex flex-col md:flex-row items-center justify-between">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              © 2024 AI Agent Platform. Built with ❤️
-            </p>
-            <div className="flex items-center space-x-6 mt-4 md:mt-0">
-              <a href="#" className="text-sm text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400">
-                Documentation
-              </a>
-              <a href="#" className="text-sm text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400">
-                API Reference
-              </a>
-              <a href="#" className="text-sm text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400">
-                Support
-              </a>
-            </div>
-          </div>
-        </div>
-      </footer>
+      {/* No footer on dashboard pages */}
     </div>
   );
 };

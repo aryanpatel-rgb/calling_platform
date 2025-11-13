@@ -2,12 +2,12 @@ import express from 'express';
 import twilio from 'twilio';
 import dotenv from 'dotenv';
 import { getAgentById } from '../db/repositories/agentRepository.js';
-import { setCallMapping, updateStatus, getAudio } from '../utils/callStore.js';
+import { setCallMapping, updateStatus, getAudio, getConversation } from '../utils/callStore.js';
+import { subscribe } from '../utils/transcriptBus.js';
 import { generateSpeech } from '../services/elevenLabsService.js';
 import { storeAudio } from '../utils/callStore.js';
 
 dotenv.config();
-
 
 const router = express.Router();
 
@@ -255,6 +255,67 @@ router.post('/status', async (req, res) => {
   } catch (err) {
     console.error('[Twilio] Status callback error:', err?.message || err);
     res.status(500).send('error');
+  }
+});
+
+// Fetch conversation (transcripts and agent replies) for a given call SID
+router.get('/conversation/:sid', async (req, res) => {
+  try {
+    const { sid } = req.params;
+    if (!sid) {
+      return res.status(400).json({ error: true, message: 'sid is required' });
+    }
+
+    const history = getConversation(sid) || [];
+
+    return res.json({
+      success: true,
+      sid,
+      messages: history
+    });
+  } catch (error) {
+    console.error('Twilio conversation fetch error:', error?.message || error);
+    return res.status(500).json({ error: true, message: error.message || 'Failed to fetch conversation' });
+  }
+});
+
+// Stream live transcripts via Server-Sent Events (SSE)
+router.get('/transcripts/:sid/stream', async (req, res) => {
+  try {
+    const { sid } = req.params;
+    if (!sid) {
+      return res.status(400).json({ error: true, message: 'sid is required' });
+    }
+
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive'
+    });
+
+    // Send an initial ping/meta
+    res.write(`data: ${JSON.stringify({ type: 'meta', sid })}\n\n`);
+
+    // Subscribe to transcript bus
+    const unsubscribe = subscribe(
+      sid,
+      (payload) => {
+        try { res.write(`data: ${JSON.stringify(payload)}\n\n`); } catch {}
+      },
+      () => {
+        try { res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`); } catch {}
+        try { res.end(); } catch {}
+      }
+    );
+
+    // Cleanup on client disconnect
+    req.on('close', () => {
+      try { unsubscribe(); } catch {}
+      try { res.end(); } catch {}
+    });
+  } catch (error) {
+    console.error('Twilio transcript stream error:', error?.message || error);
+    res.status(500).json({ error: true, message: error.message || 'Failed to stream transcripts' });
   }
 });
 

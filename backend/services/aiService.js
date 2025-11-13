@@ -105,7 +105,6 @@ export function buildSystemPrompt(agent) {
     prompt += '- After the function executes, you will receive the result and should provide a natural language response to the user\n';
     prompt += '- Do not make up function results - wait for actual execution\n';
   }
-
   return prompt;
 }
 
@@ -215,4 +214,3 @@ export default {
   buildSystemPrompt,
   streamResponse
 };
-

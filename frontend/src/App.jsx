@@ -11,12 +11,15 @@ import TestAgent from './pages/TestAgent';
 import PhoneNumbers from './pages/PhoneNumbers';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import SiteFooter from './components/SiteFooter';
 import './App.css';
 
 function App() {
   const AppRoutes = () => {
     const location = useLocation();
     const state = location.state;
+    // Show footer only when the underlying page is the home page
+    const isHome = (state?.backgroundLocation?.pathname || location.pathname) === '/';
 
     return (
       <>
@@ -35,10 +38,10 @@ function App() {
           }>
             <Route index element={<Dashboard />} />
             <Route path="agent/new" element={<AgentBuilder />} />
-          <Route path="agent/:id" element={<AgentDetail />} />
-          <Route path="agent/:id/test" element={<TestAgent />} />
-          <Route path="agent/:id/edit" element={<AgentBuilder />} />
-          <Route path="phone-numbers" element={<PhoneNumbers />} />
+            <Route path="agent/:id" element={<AgentDetail />} />
+            <Route path="agent/:id/test" element={<TestAgent />} />
+            <Route path="agent/:id/edit" element={<AgentBuilder />} />
+            <Route path="phone-numbers" element={<PhoneNumbers />} />
           </Route>
 
           {/* Catch all route */}
@@ -52,6 +55,9 @@ function App() {
             <Route path="/register" element={<Register />} />
           </Routes>
         )}
+
+        {/* Home page footer only */}
+        {isHome && <SiteFooter />}
       </>
     );
   };
@@ -60,7 +66,7 @@ function App() {
     <AuthProvider>
       <Router>
         <div className="min-h-screen bg-[#f8fff6]">
-          <Toaster 
+          <Toaster
             position="top-right"
             toastOptions={{
               duration: 3000,

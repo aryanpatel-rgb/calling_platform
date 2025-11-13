@@ -2,6 +2,7 @@ import url from 'url';
 import { WebSocketServer } from 'ws';
 import dotenv from 'dotenv';
 import { startDeepgramSession } from './deepgramService.js';
+import { publishTranscript, publishClose } from '../utils/transcriptBus.js';
 import { generateResponse, buildSystemPrompt } from './aiService.js';
 import { generateSpeech } from './elevenLabsService.js';
 import { speakReply, speakAudioReply } from './twilioService.js';
@@ -9,15 +10,6 @@ import { getAgentIdByCallSid, setStreamSid, appendConversation, getConversation,
 import { getAgentById } from '../db/repositories/agentRepository.js';
 
 dotenv.config();
-
-/**
- * Sets up a WebSocket voice gateway at path `/voice-stream`.
- * Supports two sources: `twilio` (Twilio Media Streams) and `browser`.
- * - Receives audio frames, forwards to Deepgram for streaming STT.
- * - On transcript segments, generates AI response and TTS audio.
- * - For browser source, sends base64 audio back to client over WebSocket.
- * - For twilio source, currently logs and awaits bidirectional support.
- */
 
 export function setupVoiceGateway(httpServer) {
   const wss = new WebSocketServer({ server: httpServer, path: '/voice-stream' });
@@ -61,11 +53,17 @@ export function setupVoiceGateway(httpServer) {
     // Simple utterance aggregation for faster responses on interim results
     let pendingText = '';
     let finalizeTimer = null;
+    let lastProcessedText = '';
 
     const processFinalTranscript = async (finalText) => {
       if (!active || !finalText) return;
       // Guard: only process for Twilio when call is active
       if (source === 'twilio' && (!callSidRef || !isCallActive(callSidRef))) {
+        return;
+      }
+      const textKey = finalText.trim();
+      if (textKey && lastProcessedText && textKey === lastProcessedText) {
+        // Skip duplicate processing when final equals last interim-processed text
         return;
       }
       try {
@@ -76,11 +74,15 @@ export function setupVoiceGateway(httpServer) {
           ...history,
           { role: 'user', content: finalText }
         ];
-        const ai = await generateResponse(messages, { maxTokens: 120 });
+        const ai = await generateResponse(messages, { maxTokens: 70 });
         const replyText = typeof ai === 'string' ? ai : (ai?.message || ai?.text || 'Okay.');
+        // Mark processed text to avoid duplicate handling on matching final
+        lastProcessedText = textKey;
 
         console.log('[VoiceGateway] AI reply:', replyText);
         console.log(`[Conversation] AGENT [agent:${agentId || 'n/a'} sid:${callSidRef || 'n/a'}]: ${replyText}`);
+        // Publish assistant reply for SSE subscribers
+        try { if (callSidRef) publishTranscript(callSidRef, { type: 'assistant', text: replyText }); } catch {}
 
         // Persist conversation memory
         try {
@@ -92,56 +94,61 @@ export function setupVoiceGateway(httpServer) {
           }
         } catch {}
 
-        // Generate speech with ElevenLabs using agent-selected voice when available
-        const vs = (agent ? (agent.voiceSettings || agent.voice_settings || {}) : {});
-        const audioBase64 = await generateSpeech(replyText, {
-          voiceId: vs.voiceId || 'default',
-          stability: vs.stability,
-          similarityBoost: vs.similarityBoost,
-          speed: vs.speed
-        });
-        console.log('[VoiceGateway] TTS length (base64 chars):', audioBase64?.length || 0);
-
         if (source === 'browser') {
+          // Browser: continue using ElevenLabs for local demo audio
+          const vs = (agent ? (agent.voiceSettings || agent.voice_settings || {}) : {});
+          const audioBase64 = await generateSpeech(replyText, {
+            voiceId: vs.voiceId || 'default',
+            stability: vs.stability,
+            similarityBoost: vs.similarityBoost
+          });
+          console.log('[VoiceGateway] TTS length (base64 chars):', audioBase64?.length || 0);
           try { ws.send(JSON.stringify({ type: 'audio', format: 'audio/mpeg', data: audioBase64 })); } catch {}
           try { ws.send(JSON.stringify({ type: 'text', data: replyText })); } catch {}
         } else {
-          // For Twilio, play ElevenLabs audio via <Play>, then resume <Stream>
+          // Twilio: choose TTS engine based on agent.voiceSettings.ttsEngine or env TTS_ENGINE
           try {
-            const { VOICE_GATEWAY_WS_URL, SERVER_URL } = process.env;
+            const { VOICE_GATEWAY_WS_URL, SERVER_URL, TTS_ENGINE } = process.env;
             const wsUrl = VOICE_GATEWAY_WS_URL || (SERVER_URL ? SERVER_URL.replace('http', 'ws') + '/voice-stream' : 'ws://localhost:3000/voice-stream');
-            const httpBase = SERVER_URL || null;
             const effectiveAgentId = agentId || getAgentIdByCallSid(callSidRef) || null;
+            const vs = (agent ? (agent.voiceSettings || agent.voice_settings || {}) : {});
+            const ttsEngine = (typeof vs.ttsEngine === 'string' ? vs.ttsEngine.toLowerCase() : (TTS_ENGINE || 'elevenlabs'));
+
             if (!effectiveAgentId) {
               console.warn('[VoiceGateway] No agentId available; skipping speak update.');
-            } else if (!httpBase) {
-              console.warn('[VoiceGateway] SERVER_URL not set; cannot serve audio to Twilio. Falling back to <Say>.');
-              if (isCallActive(callSidRef)) {
-                await speakReply(effectiveAgentId, callSidRef, replyText, `${wsUrl}?source=twilio&agentId=${encodeURIComponent(effectiveAgentId)}`);
-                console.log('[VoiceGateway] Spoke reply via Twilio <Say> and resumed stream.');
-              }
-            } else {
-              if (isCallActive(callSidRef)) {
-                const audioId = storeAudio(audioBase64, 'audio/mpeg');
-                const audioUrl = `${httpBase}/api/twilio/audio/${audioId}`;
-                await speakAudioReply(effectiveAgentId, callSidRef, audioUrl, `${wsUrl}?source=twilio&agentId=${encodeURIComponent(effectiveAgentId)}`);
-                console.log('[VoiceGateway] Spoke reply via Twilio <Play> (ElevenLabs) and resumed stream.');
-              }
-            }
-          } catch (err) {
-            console.error('[VoiceGateway] Error speaking audio reply to Twilio:', err?.message || err);
-            // Fallback to text <Say>
-            try {
-              const { VOICE_GATEWAY_WS_URL, SERVER_URL } = process.env;
-              const wsUrl = VOICE_GATEWAY_WS_URL || (SERVER_URL ? SERVER_URL.replace('http', 'ws') + '/voice-stream' : 'ws://localhost:3000/voice-stream');
-              const effectiveAgentId = agentId || getAgentIdByCallSid(callSidRef) || null;
-              if (callSidRef && effectiveAgentId && isCallActive(callSidRef)) {
+            } else if (!isCallActive(callSidRef)) {
+              console.warn('[VoiceGateway] Call inactive; skipping speak update.');
+            } else if (ttsEngine === 'elevenlabs') {
+              if (!SERVER_URL) {
+                console.warn('[VoiceGateway] SERVER_URL not set; ElevenLabs requires audio hosting. Falling back to <Say>.');
                 await speakReply(effectiveAgentId, callSidRef, replyText, `${wsUrl}?source=twilio&agentId=${encodeURIComponent(effectiveAgentId)}`);
                 console.log('[VoiceGateway] Fallback <Say> spoken and stream resumed.');
               } else {
-                console.warn('[VoiceGateway] Fallback skipped; call not active.');
+                // High-quality TTS via ElevenLabs and <Play>
+                const audioBase64 = await generateSpeech(replyText, {
+                  voiceId: vs.voiceId || 'default',
+                  stability: vs.stability,
+                  similarityBoost: vs.similarityBoost,
+                  speed: vs.speed
+                });
+                if (!audioBase64) {
+                  console.warn('[VoiceGateway] Empty ElevenLabs audio; falling back to <Say>.');
+                  await speakReply(effectiveAgentId, callSidRef, replyText, `${wsUrl}?source=twilio&agentId=${encodeURIComponent(effectiveAgentId)}`);
+                  console.log('[VoiceGateway] Fallback <Say> spoken and stream resumed.');
+                } else {
+                  const audioId = storeAudio(audioBase64, 'audio/mpeg');
+                  const audioUrl = `${SERVER_URL}/api/twilio/audio/${audioId}`;
+                  await speakAudioReply(effectiveAgentId, callSidRef, audioUrl, `${wsUrl}?source=twilio&agentId=${encodeURIComponent(effectiveAgentId)}`);
+                  console.log('[VoiceGateway] Spoke reply via Twilio <Play> (ElevenLabs) and resumed stream.');
+                }
               }
-            } catch {}
+            } else {
+              // Lower-latency basic TTS via Twilio <Say>
+              await speakReply(effectiveAgentId, callSidRef, replyText, `${wsUrl}?source=twilio&agentId=${encodeURIComponent(effectiveAgentId)}`);
+              console.log('[VoiceGateway] Spoke reply via Twilio <Say> and resumed stream.');
+            }
+          } catch (err) {
+            console.error('[VoiceGateway] Error speaking reply to Twilio:', err?.message || err);
           }
         }
       } catch (error) {
@@ -157,6 +164,8 @@ export function setupVoiceGateway(httpServer) {
         if (transcript) {
           console.log('[VoiceGateway] Transcript:', { text: transcript, final: !!isFinal });
           console.log(`[Conversation] USER [agent:${agentId || 'n/a'} sid:${callSidRef || 'n/a'}]: ${transcript}`);
+          // Publish transcript for SSE subscribers when we have a callSid
+          try { if (callSidRef) publishTranscript(callSidRef, { type: 'user', text: transcript, final: !!isFinal }); } catch {}
         }
 
         if (!active || !transcript) return;
@@ -178,7 +187,7 @@ export function setupVoiceGateway(httpServer) {
           const text = pendingText;
           pendingText = '';
           if (text) processFinalTranscript(text);
-        }, 800);
+        }, 400);
       }
     });
 
@@ -215,6 +224,8 @@ export function setupVoiceGateway(httpServer) {
             }
             console.log('[VoiceGateway] Twilio stream started:', { streamSid: msg.streamSid, callSid: callSidRef, agentId });
             try { ws.send(JSON.stringify({ type: 'status', message: 'Twilio stream started', callSid: callSidRef })); } catch {}
+            // Notify SSE subscribers
+            try { if (callSidRef) publishTranscript(callSidRef, { type: 'status', status: 'started' }); } catch {}
           } else if (msg.event === 'media' && msg.media && msg.media.payload) {
             // mu-law base64 payload at 8000 Hz
             dg.writeTwilioBase64(msg.media.payload);
@@ -227,6 +238,7 @@ export function setupVoiceGateway(httpServer) {
             active = false;
             dg.end();
             ws.close();
+            try { if (callSidRef) publishTranscript(callSidRef, { type: 'status', status: 'stopped' }); publishClose(callSidRef); } catch {}
           }
           return;
         }
@@ -245,6 +257,7 @@ export function setupVoiceGateway(httpServer) {
       console.log('[VoiceGateway] Connection closed');
       active = false;
       dg.end();
+      try { if (callSidRef) publishClose(callSidRef); } catch {}
     });
   });
 }
